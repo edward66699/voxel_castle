@@ -172,29 +172,71 @@
       return;
     }
 
-    // ---------- Sino-Japanese Soundtrack + Dynamic Weather & Tri-Dragon SFX ----------
+    // ---------- Orchestral East Asian Mythic Soundtrack & Adaptive Environmental Audio ----------
     class EastAsianSoundtrack {
       constructor() {
         this.ctx = null;
         this.enabled = false;
         this.master = null;
+        this.comp = null;
         this.reverbIn = null;
         this.rainGain = null;
-        this.rainSrc = null;
+        this.windGain = null;
+        this.oceanGain = null;
         this.timer = null;
         this.step = 0;
+        this.nextNoteTime = 0;
         this.noiseBuf = null;
         this.weather = 'clear';
-        this.kotoScale = [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99, 880.00];
-        this.kotoPattern = [0, 2, 3, 5, 4, 3, 2, 1, 0, 3, 5, 7, 6, 5, 3, 2, 3, 5, 8, 7, 5, 4, 3, 2, 1, 2, 3, 5, 4, 2, 0, -1];
-        this.flutePhrase = [
-          { step: 0, freq: 587.33, dur: 1.9, bend: 554.37 },
-          { step: 6, freq: 659.25, dur: 1.3, bend: 587.33 },
-          { step: 10, freq: 739.99, dur: 2.2, bend: 659.25 },
-          { step: 16, freq: 880.00, dur: 1.8, bend: 739.99 },
-          { step: 22, freq: 659.25, dur: 1.5, bend: 587.33 },
-          { step: 26, freq: 587.33, dur: 2.4, bend: 493.88 }
+        this.timeMode = 'sunset';
+        this.waterActive = false;
+        this.boostActive = false;
+        // D Major Pentatonic spanning 3 octaves: D4(0)..D6(10)
+        this.scale = [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99, 880.00, 987.77, 1174.66];
+        this.roots = [146.83, 185.00, 246.94, 220.00, 196.00, 164.81, 220.00, 146.83];
+        // 128-step (4 evolving movements x 32 steps) Guzheng / Koto melody (-1 = rest)
+        this.kotoSeq = [
+          // Mov I: Dawn Citadel (0..31)
+          0, -1, 2, 3, 5, -1, 4, 3, 2, -1, 3, 5, 7, -1, 5, -1,
+          3, 5, 8, -1, 7, 5, 4, 3, 2, 3, 5, -1, 4, 2, 0, -1,
+          // Mov II: Tides of Xuanwu (32..63)
+          2, 3, 5, 7, 8, -1, 7, 5, 4, 5, 7, 8, 9, -1, 8, -1,
+          5, 7, 8, 10, 9, 8, 7, 5, 4, 5, 3, 2, 3, -1, 0, -1,
+          // Mov III: Mythic Surge Climax (64..95)
+          5, 7, 8, 10, 8, 7, 8, 5, 7, 8, 10, 9, 8, 7, 5, -1,
+          3, 5, 7, 8, 10, 9, 8, 7, 5, 7, 8, 7, 5, 4, 3, -1,
+          // Mov IV: Celestial Reflections (96..127)
+          4, -1, 5, 7, -1, 5, 4, 2, 3, -1, 5, 8, -1, 7, 5, -1,
+          2, -1, 3, 5, 7, -1, 5, 3, 2, -1, 1, 2, 0, -1, -1, -1
         ];
+        // Bass plucked drone notes every 8 steps
+        this.bassSeq = [146.83, 110.00, 123.47, 146.83, 196.00, 185.00, 164.81, 110.00, 246.94, 185.00, 196.00, 220.00, 146.83, 196.00, 220.00, 146.83];
+        // Expressive Flute phrases anchored across all 4 movements
+        this.fluteCues = new Map([
+          [0,   { f: 587.33, d: 2.2, s: 523.25 }],
+          [10,  { f: 739.99, d: 2.4, s: 659.25 }],
+          [20,  { f: 659.25, d: 1.8, s: 587.33 }],
+          [26,  { f: 587.33, d: 2.6, s: 493.88 }],
+          [40,  { f: 880.00, d: 2.2, s: 739.99 }],
+          [52,  { f: 739.99, d: 2.4, s: 659.25 }],
+          [64,  { f: 880.00, d: 2.6, s: 739.99 }],
+          [72,  { f: 1174.66, d: 2.4, s: 987.77 }],
+          [84,  { f: 880.00, d: 2.2, s: 987.77 }],
+          [96,  { f: 587.33, d: 2.8, s: 523.25 }],
+          [110, { f: 659.25, d: 2.4, s: 587.33 }],
+          [120, { f: 587.33, d: 3.0, s: 493.88 }]
+        ]);
+        // Soaring Erhu Bowed String phrases
+        this.erhuCues = new Map([
+          [16,  { f: 440.00, d: 2.4, n: 493.88 }],
+          [32,  { f: 493.88, d: 2.6, n: 587.33 }],
+          [46,  { f: 659.25, d: 2.4, n: 587.33 }],
+          [58,  { f: 440.00, d: 2.2, n: 369.99 }],
+          [68,  { f: 587.33, d: 2.8, n: 739.99 }],
+          [78,  { f: 739.99, d: 2.6, n: 880.00 }],
+          [90,  { f: 587.33, d: 2.4, n: 440.00 }],
+          [104, { f: 440.00, d: 2.6, n: 369.99 }]
+        ]);
       }
 
       init() {
@@ -202,32 +244,50 @@
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return;
         this.ctx = new AC();
+
+        this.comp = this.ctx.createDynamicsCompressor();
+        this.comp.threshold.value = -13;
+        this.comp.knee.value = 18;
+        this.comp.ratio.value = 4.5;
+        this.comp.attack.value = 0.008;
+        this.comp.release.value = 0.24;
+        this.comp.connect(this.ctx.destination);
+
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.42;
-        this.master.connect(this.ctx.destination);
+        this.master.gain.value = 0.44;
+        this.master.connect(this.comp);
 
         this.reverbIn = this.ctx.createGain();
-        const dry = this.ctx.createGain();
-        dry.gain.value = 0.78;
-        this.reverbIn.connect(dry);
-        dry.connect(this.master);
+        this.bgmBus = this.ctx.createGain();
+        this.bgmBus.gain.value = 1.0;
+        this.bgmBus.connect(this.reverbIn);
+        const dry = this.ctx.createGain(); dry.gain.value = 0.78;
+        this.reverbIn.connect(dry); dry.connect(this.master);
 
-        const d1 = this.ctx.createDelay(1.0);
-        const d2 = this.ctx.createDelay(1.0);
-        d1.delayTime.value = 0.29;
-        d2.delayTime.value = 0.43;
-        const fb1 = this.ctx.createGain(); fb1.gain.value = 0.36;
-        const fb2 = this.ctx.createGain(); fb2.gain.value = 0.32;
-        const lpf = this.ctx.createBiquadFilter();
-        lpf.type = 'lowpass'; lpf.frequency.value = 2100;
-        const wet = this.ctx.createGain(); wet.gain.value = 0.45;
+        // Stereo Temple Hall Delay Network
+        const dL = this.ctx.createDelay(1.2), dR = this.ctx.createDelay(1.2);
+        dL.delayTime.value = 0.26; dR.delayTime.value = 0.39;
+        const fbL = this.ctx.createGain(), fbR = this.ctx.createGain();
+        fbL.gain.value = 0.38; fbR.gain.value = 0.34;
+        const lpf = this.ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 2400;
+        const panL = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+        const panR = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+        const wetL = this.ctx.createGain(), wetR = this.ctx.createGain();
+        wetL.gain.value = 0.28; wetR.gain.value = 0.26;
 
-        this.reverbIn.connect(d1);
-        d1.connect(fb1); fb1.connect(d2);
-        d2.connect(fb2); fb2.connect(lpf); lpf.connect(d1);
-        d1.connect(wet); d2.connect(wet);
-        wet.connect(this.master);
+        this.reverbIn.connect(dL); this.reverbIn.connect(dR);
+        dL.connect(fbL); fbL.connect(dR);
+        dR.connect(fbR); fbR.connect(lpf); lpf.connect(dL);
+        if (panL && panR) {
+          panL.pan.value = -0.65; panR.pan.value = 0.65;
+          dL.connect(wetL); wetL.connect(panL); panL.connect(this.master);
+          dR.connect(wetR); wetR.connect(panR); panR.connect(this.master);
+        } else {
+          dL.connect(wetL); wetL.connect(this.master);
+          dR.connect(wetR); wetR.connect(this.master);
+        }
 
+        // Seamless Pink Noise Buffer
         const len = this.ctx.sampleRate * 2;
         this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const data = this.noiseBuf.getChannelData(0);
@@ -245,24 +305,68 @@
           data[i] = data[i] * t + data[len - fade + i] * (1 - t);
         }
 
-        this.rainGain = this.ctx.createGain();
-        this.rainGain.gain.value = 0.0;
-        const rFilt = this.ctx.createBiquadFilter();
-        rFilt.type = 'bandpass'; rFilt.frequency.value = 1350; rFilt.Q.value = 0.65;
-        this.rainSrc = this.ctx.createBufferSource();
-        this.rainSrc.buffer = this.noiseBuf;
-        this.rainSrc.loop = true;
-        this.rainSrc.connect(rFilt);
-        rFilt.connect(this.rainGain);
-        this.rainGain.connect(this.master);
-        this.rainSrc.start();
+        // Storm Rain Bed
+        this.rainGain = this.ctx.createGain(); this.rainGain.gain.value = 0.0;
+        const rFilt = this.ctx.createBiquadFilter(); rFilt.type = 'bandpass'; rFilt.frequency.value = 1380; rFilt.Q.value = 0.65;
+        const rainSrc = this.ctx.createBufferSource(); rainSrc.buffer = this.noiseBuf; rainSrc.loop = true;
+        rainSrc.connect(rFilt); rFilt.connect(this.rainGain); this.rainGain.connect(this.master);
+        rainSrc.start();
+
+        // Living Ocean Surf Swell Bed (breathes via 0.14 Hz LFO when Sea Water is summoned)
+        this.oceanGain = this.ctx.createGain(); this.oceanGain.gain.value = 0.0;
+        const oFilt = this.ctx.createBiquadFilter(); oFilt.type = 'lowpass'; oFilt.frequency.value = 460; oFilt.Q.value = 0.85;
+        const oLfo = this.ctx.createOscillator(); oLfo.frequency.value = 0.14;
+        const oLfoG = this.ctx.createGain(); oLfoG.gain.value = 240;
+        oLfo.connect(oLfoG); oLfoG.connect(oFilt.frequency);
+        const oSrc = this.ctx.createBufferSource(); oSrc.buffer = this.noiseBuf; oSrc.loop = true;
+        oSrc.connect(oFilt); oFilt.connect(this.oceanGain); this.oceanGain.connect(this.master);
+        oLfo.start(); oSrc.start();
+
+        // Ethereal High Mountain Breeze (Snow / Night)
+        this.windGain = this.ctx.createGain(); this.windGain.gain.value = 0.0;
+        const wFilt = this.ctx.createBiquadFilter(); wFilt.type = 'bandpass'; wFilt.frequency.value = 540; wFilt.Q.value = 2.4;
+        const wLfo = this.ctx.createOscillator(); wLfo.frequency.value = 0.11;
+        const wLfoG = this.ctx.createGain(); wLfoG.gain.value = 180;
+        wLfo.connect(wLfoG); wLfoG.connect(wFilt.frequency);
+        const wSrc = this.ctx.createBufferSource(); wSrc.buffer = this.noiseBuf; wSrc.loop = true;
+        wSrc.connect(wFilt); wFilt.connect(this.windGain); this.windGain.connect(this.master);
+        wLfo.start(); wSrc.start();
       }
 
       setWeather(w) {
         this.weather = w;
+        this.syncAmbience();
+      }
+
+      setSceneState(st) {
+        const wAct = !!st.water, bAct = !!st.boost;
+        if (this.timeMode === st.time && this.weather === st.weather && this.waterActive === wAct && this.boostActive === bAct) return;
+        this.timeMode = st.time;
+        this.weather = st.weather;
+        this.waterActive = wAct;
+        this.boostActive = bAct;
+        this.syncAmbience();
+      }
+
+      syncAmbience() {
         if (!this.ctx || !this.rainGain) return;
-        const targetRain = (this.enabled && w === 'storm') ? 0.22 : 0.0;
-        this.rainGain.gain.setTargetAtTime(targetRain, this.ctx.currentTime, 0.35);
+        const t = this.ctx.currentTime;
+        this.bgmBus?.gain.setTargetAtTime(this.enabled ? 1.0 : 0.0, t, 0.16);
+        this.rainGain.gain.setTargetAtTime((this.enabled && this.weather === 'storm') ? 0.22 : 0.0, t, 0.35);
+        this.oceanGain.gain.setTargetAtTime((this.enabled && this.waterActive) ? 0.15 : 0.0, t, 0.55);
+        this.windGain.gain.setTargetAtTime((this.enabled && (this.weather === 'snow' || this.timeMode === 'night')) ? 0.09 : 0.0, t, 0.50);
+      }
+
+      connectPan(node, pan = 0, useSfxBus = false) {
+        const dest = useSfxBus ? this.reverbIn : (this.bgmBus || this.reverbIn);
+        if (this.ctx.createStereoPanner && Math.abs(pan) > 0.01) {
+          const p = this.ctx.createStereoPanner();
+          p.pan.value = Math.max(-1, Math.min(1, pan));
+          node.connect(p);
+          p.connect(dest);
+        } else {
+          node.connect(dest);
+        }
       }
 
       toggle() {
@@ -270,12 +374,13 @@
         if (!this.ctx) return false;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.enabled = !this.enabled;
-        this.setWeather(this.weather);
+        this.syncAmbience();
         if (this.enabled) {
           this.step = 0;
-          this.playTempleGong(73.42);
-          this.tick();
-          this.timer = setInterval(() => this.tick(), 340);
+          this.nextNoteTime = this.ctx.currentTime + 0.04;
+          this.playTempleGong(73.42, this.nextNoteTime);
+          this.scheduler();
+          this.timer = setInterval(() => this.scheduler(), 70);
         } else {
           clearInterval(this.timer);
           this.timer = null;
@@ -283,103 +388,216 @@
         return this.enabled;
       }
 
-      playKoto(freq, vel = 0.16, bend = false) {
-        if (!this.ctx || !this.enabled) return;
-        const t = this.ctx.currentTime;
+      playKoto(freq, vel = 0.16, bend = false, atTime = null, pan = -0.18, force = false) {
+        if (!this.ctx || (!this.enabled && !force)) return;
+        const t = atTime ?? this.ctx.currentTime;
         const osc1 = this.ctx.createOscillator(), osc2 = this.ctx.createOscillator();
         osc1.type = 'triangle'; osc2.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(bend ? freq * 0.96 : freq, t);
-        osc2.frequency.setValueAtTime((bend ? freq * 0.96 : freq) * 2.002, t);
+        osc1.frequency.setValueAtTime(bend ? freq * 0.955 : freq, t);
+        osc2.frequency.setValueAtTime((bend ? freq * 0.955 : freq) * 2.002, t);
         if (bend) {
-          osc1.frequency.exponentialRampToValueAtTime(freq, t + 0.11);
-          osc2.frequency.exponentialRampToValueAtTime(freq * 2.002, t + 0.11);
+          osc1.frequency.exponentialRampToValueAtTime(freq, t + 0.12);
+          osc2.frequency.exponentialRampToValueAtTime(freq * 2.002, t + 0.12);
         }
         const filt = this.ctx.createBiquadFilter();
         filt.type = 'lowpass'; filt.Q.value = 3.2;
-        filt.frequency.setValueAtTime(Math.min(freq * 9.0, 5200), t);
-        filt.frequency.exponentialRampToValueAtTime(freq * 1.4, t + 1.4);
+        filt.frequency.setValueAtTime(Math.min(freq * 9.5, 5600), t);
+        filt.frequency.exponentialRampToValueAtTime(freq * 1.45, t + 1.5);
 
         const g = this.ctx.createGain();
         g.gain.setValueAtTime(0.0001, t);
         g.gain.linearRampToValueAtTime(vel, t + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.35);
 
         osc1.connect(filt);
         const o2g = this.ctx.createGain(); o2g.gain.value = 0.28;
         osc2.connect(o2g); o2g.connect(filt);
-        filt.connect(g); g.connect(this.reverbIn);
+        filt.connect(g); this.connectPan(g, pan, force);
         osc1.start(t); osc2.start(t);
-        osc1.stop(t + 2.25); osc2.stop(t + 2.25);
+        osc1.stop(t + 2.4); osc2.stop(t + 2.4);
       }
 
-      playFlute(freq, dur, startFreq) {
+      playKotoGliss(baseFreq, count = 4, vel = 0.10, atTime = null, pan = -0.25) {
         if (!this.ctx || !this.enabled) return;
-        const t = this.ctx.currentTime;
+        const ratios = [1.0, 1.125, 1.25, 1.5, 1.667, 2.0];
+        const t0 = atTime ?? this.ctx.currentTime;
+        for (let i = 0; i < count; i++) {
+          this.playKoto(baseFreq * ratios[i % ratios.length], vel * (0.75 + i * 0.08), i === count - 1, t0 + i * 0.048, pan + i * 0.12);
+        }
+      }
+
+      playPipa(freq, vel = 0.09, atTime = null, pan = 0.34) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, t);
+        const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = Math.min(freq * 2.4, 3400); bp.Q.value = 2.0;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vel, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+        osc.connect(bp); bp.connect(g); this.connectPan(g, pan);
+        osc.start(t); osc.stop(t + 0.6);
+      }
+
+      playErhu(freq, dur, nextFreq = null, vel = 0.085, atTime = null, pan = 0.24) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * 0.94, t);
+        osc.frequency.exponentialRampToValueAtTime(freq, t + 0.22);
+        if (nextFreq) {
+          osc.frequency.setValueAtTime(freq, t + dur * 0.72);
+          osc.frequency.exponentialRampToValueAtTime(nextFreq, t + dur * 0.96);
+        }
+        const vib = this.ctx.createOscillator(), vibG = this.ctx.createGain();
+        vib.frequency.value = 5.3;
+        vibG.gain.setValueAtTime(0, t);
+        vibG.gain.linearRampToValueAtTime(freq * 0.015, t + 0.45);
+        vib.connect(vibG); vibG.connect(osc.frequency);
+
+        const f1 = this.ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 780; f1.Q.value = 1.6;
+        const f2 = this.ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1520; f2.Q.value = 2.2;
+        const fMix = this.ctx.createGain();
+        const env = this.ctx.createGain();
+        env.gain.setValueAtTime(0.0001, t);
+        env.gain.linearRampToValueAtTime(vel, t + 0.28);
+        env.gain.setValueAtTime(vel * 0.88, t + dur * 0.70);
+        env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        osc.connect(f1); osc.connect(f2);
+        f1.connect(fMix); f2.connect(fMix);
+        fMix.connect(env); this.connectPan(env, pan);
+        osc.start(t); vib.start(t);
+        osc.stop(t + dur + 0.08); vib.stop(t + dur + 0.08);
+      }
+
+      playPadChord(rootFreq, dur = 3.2, vel = 0.055, atTime = null) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
+        const ratios = [1.0, 1.5, 2.25];
+        ratios.forEach((r, idx) => {
+          const osc = this.ctx.createOscillator();
+          osc.type = idx === 0 ? 'triangle' : 'sine';
+          osc.frequency.value = rootFreq * r;
+          const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100;
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(vel / (idx * 0.45 + 1), t + 0.9);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          osc.connect(lp); lp.connect(g); this.connectPan(g, idx === 1 ? -0.35 : (idx === 2 ? 0.35 : 0));
+          osc.start(t); osc.stop(t + dur + 0.1);
+        });
+      }
+
+      playFlute(freq, dur, startFreq, vel = 0.105, atTime = null, pan = -0.22) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(startFreq || freq * 0.92, t);
         osc.frequency.exponentialRampToValueAtTime(freq, t + 0.28);
 
         const vib = this.ctx.createOscillator(), vibG = this.ctx.createGain();
-        vib.frequency.value = 4.8;
+        vib.frequency.value = 4.9;
         vibG.gain.setValueAtTime(0, t);
         vibG.gain.linearRampToValueAtTime(freq * 0.012, t + 0.55);
         vib.connect(vibG); vibG.connect(osc.frequency);
 
-        const sub = this.ctx.createOscillator();
-        sub.type = 'triangle'; sub.frequency.value = freq * 2;
-        const subG = this.ctx.createGain(); subG.gain.value = 0.10;
-        sub.connect(subG);
+        const sub = this.ctx.createOscillator(); sub.type = 'triangle'; sub.frequency.value = freq * 2;
+        const subG = this.ctx.createGain(); subG.gain.value = 0.09; sub.connect(subG);
 
         const nSrc = this.ctx.createBufferSource(); nSrc.buffer = this.noiseBuf;
-        const nBp = this.ctx.createBiquadFilter();
-        nBp.type = 'bandpass'; nBp.frequency.value = freq * 1.5; nBp.Q.value = 4.0;
+        const nBp = this.ctx.createBiquadFilter(); nBp.type = 'bandpass'; nBp.frequency.value = freq * 1.5; nBp.Q.value = 4.0;
         const nG = this.ctx.createGain();
-        nG.gain.setValueAtTime(0.0001, t);
-        nG.gain.linearRampToValueAtTime(0.045, t + 0.14);
-        nG.gain.exponentialRampToValueAtTime(0.006, t + dur);
+        nG.gain.setValueAtTime(0.0001, t); nG.gain.linearRampToValueAtTime(0.042, t + 0.14); nG.gain.exponentialRampToValueAtTime(0.005, t + dur);
         nSrc.connect(nBp); nBp.connect(nG);
 
         const env = this.ctx.createGain();
         env.gain.setValueAtTime(0.0001, t);
-        env.gain.linearRampToValueAtTime(0.11, t + 0.24);
-        env.gain.setValueAtTime(0.095, t + dur * 0.65);
+        env.gain.linearRampToValueAtTime(vel, t + 0.24);
+        env.gain.setValueAtTime(vel * 0.85, t + dur * 0.65);
         env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
         osc.connect(env); subG.connect(env); nG.connect(env);
-        env.connect(this.reverbIn);
+        this.connectPan(env, pan);
         osc.start(t); sub.start(t); vib.start(t); nSrc.start(t);
         osc.stop(t + dur + 0.1); sub.stop(t + dur + 0.1); vib.stop(t + dur + 0.1); nSrc.stop(t + dur + 0.1);
       }
 
-      playTaiko(accent = 1.0) {
-        if (!this.ctx || !this.enabled) return;
-        const t = this.ctx.currentTime;
+      playChime(freq, vel = 0.05, atTime = null, pan = 0.4, force = false) {
+        if (!this.ctx || (!this.enabled && !force)) return;
+        const t = atTime ?? this.ctx.currentTime;
+        const car = this.ctx.createOscillator(), mod = this.ctx.createOscillator();
+        const modG = this.ctx.createGain(), env = this.ctx.createGain();
+        car.type = 'sine'; mod.type = 'sine';
+        car.frequency.value = freq; mod.frequency.value = freq * 2.756;
+        modG.gain.setValueAtTime(freq * 0.75, t); modG.gain.exponentialRampToValueAtTime(1.0, t + 0.8);
+        env.gain.setValueAtTime(0.0001, t); env.gain.linearRampToValueAtTime(vel, t + 0.01); env.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+        mod.connect(modG); modG.connect(car.frequency);
+        car.connect(env); this.connectPan(env, pan, force);
+        car.start(t); mod.start(t);
+        car.stop(t + 2.45); mod.stop(t + 2.45);
+      }
+
+      playTaiko(accent = 1.0, atTime = null, force = false) {
+        if (!this.ctx || (!this.enabled && !force)) return;
+        const t = atTime ?? this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(102, t);
-        osc.frequency.exponentialRampToValueAtTime(42, t + 0.22);
+        osc.frequency.setValueAtTime(112, t);
+        osc.frequency.exponentialRampToValueAtTime(41, t + 0.24);
         const g = this.ctx.createGain();
         g.gain.setValueAtTime(0.0001, t);
         g.gain.linearRampToValueAtTime(0.28 * accent, t + 0.012);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.72);
-        osc.connect(g); g.connect(this.reverbIn);
-        osc.start(t); osc.stop(t + 0.75);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.82);
+        osc.connect(g); this.connectPan(g, 0, force);
+        osc.start(t); osc.stop(t + 0.86);
+
+        const nSrc = this.ctx.createBufferSource(); nSrc.buffer = this.noiseBuf;
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 340;
+        const ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(0.0001, t); ng.gain.linearRampToValueAtTime(0.14 * accent, t + 0.008); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        nSrc.connect(lp); lp.connect(ng); this.connectPan(ng, 0, force);
+        nSrc.start(t); nSrc.stop(t + 0.22);
       }
 
-      playTempleGong(base = 73.42) {
+      playWoodblock(vel = 0.06, atTime = null, pan = 0.45) {
         if (!this.ctx || !this.enabled) return;
-        const t = this.ctx.currentTime;
-        [1, 1.5, 2.02, 2.98].forEach((r, idx) => {
+        const t = atTime ?? this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(920, t); osc.frequency.exponentialRampToValueAtTime(640, t + 0.05);
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+        osc.connect(g); this.connectPan(g, pan);
+        osc.start(t); osc.stop(t + 0.11);
+      }
+
+      playCymbalSwell(dur = 1.6, vel = 0.075, atTime = null) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
+        const nSrc = this.ctx.createBufferSource(); nSrc.buffer = this.noiseBuf;
+        const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3600;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(vel, t + dur * 0.45);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        nSrc.connect(hp); hp.connect(g); this.connectPan(g, 0, false);
+        nSrc.start(t); nSrc.stop(t + dur + 0.1);
+      }
+
+      playTempleGong(base = 73.42, atTime = null) {
+        if (!this.ctx || !this.enabled) return;
+        const t = atTime ?? this.ctx.currentTime;
+        [1, 1.498, 2.01, 2.54, 3.12].forEach((r, idx) => {
           const osc = this.ctx.createOscillator();
           osc.type = idx === 0 ? 'sine' : 'triangle';
           osc.frequency.value = base * r;
           const g = this.ctx.createGain();
           g.gain.setValueAtTime(0.0001, t);
-          g.gain.linearRampToValueAtTime(0.11 / (idx + 1), t + 0.04);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 4.8);
-          osc.connect(g); g.connect(this.reverbIn);
-          osc.start(t); osc.stop(t + 5.0);
+          g.gain.linearRampToValueAtTime(0.11 / (idx * 0.8 + 1), t + 0.04);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 5.2);
+          osc.connect(g); this.connectPan(g, 0, false);
+          osc.start(t); osc.stop(t + 5.4);
         });
       }
 
@@ -488,7 +706,6 @@
       playTriDragonClimax() {
         this.playDragonFire();
         if (!this.ctx) return;
-        // Deep earth-shaking sub-bass tremor + snow gale + lightning thunder crack when dragons converge (~2.1s)
         setTimeout(() => {
           if (!this.ctx) return;
           const now = this.ctx.currentTime;
@@ -512,8 +729,7 @@
           // Stage 1 (0.0s -> 1.05s): Ancient Tortoise Primordial Bellow + Coiled Serpent Fierce Hiss & Hydro-Rune Charge
           const bellow1 = this.ctx.createOscillator();
           const bellow2 = this.ctx.createOscillator();
-          bellow1.type = 'sawtooth';
-          bellow2.type = 'triangle';
+          bellow1.type = 'sawtooth'; bellow2.type = 'triangle';
           bellow1.frequency.setValueAtTime(68, now);
           bellow1.frequency.exponentialRampToValueAtTime(42, now + 0.32);
           bellow1.frequency.exponentialRampToValueAtTime(96, now + 0.78);
@@ -536,9 +752,7 @@
           bellow1.start(now); bellow1.stop(now + 1.25);
           bellow2.start(now); bellow2.stop(now + 1.25);
 
-          // Serpent high-pitched resonant shriek + hiss during charge (0.12s -> 1.02s)
-          const sCry = this.ctx.createOscillator();
-          sCry.type = 'sine';
+          const sCry = this.ctx.createOscillator(); sCry.type = 'sine';
           sCry.frequency.setValueAtTime(510, now + 0.12);
           sCry.frequency.exponentialRampToValueAtTime(920, now + 0.58);
           sCry.frequency.exponentialRampToValueAtTime(640, now + 1.02);
@@ -550,8 +764,7 @@
           sCry.start(now + 0.12); sCry.stop(now + 1.06);
 
           const hSrc = this.ctx.createBufferSource(); hSrc.buffer = this.noiseBuf;
-          const hBp = this.ctx.createBiquadFilter();
-          hBp.type = 'bandpass'; hBp.Q.value = 2.6;
+          const hBp = this.ctx.createBiquadFilter(); hBp.type = 'bandpass'; hBp.Q.value = 2.6;
           hBp.frequency.setValueAtTime(1500, now + 0.10);
           hBp.frequency.exponentialRampToValueAtTime(3200, now + 0.72);
           hBp.frequency.exponentialRampToValueAtTime(1800, now + 1.04);
@@ -562,17 +775,14 @@
           hSrc.connect(hBp); hBp.connect(hGain); hGain.connect(this.reverbIn);
           hSrc.start(now + 0.10); hSrc.stop(now + 1.08);
 
-          // Ascending hydro-rune koto chime during 1s charge
           [293.66, 440.0, 587.33, 880.0, 1174.66].forEach((f, idx) => {
-            setTimeout(() => this.playKoto(f, 0.16, true), idx * 170);
+            this.playKoto(f, 0.14, true, now + idx * 0.17, -0.3 + idx * 0.15, true);
           });
 
-          // Stage 2 (1.05s -> 3.6s): Colossal Tidal Tsunami Impact & Roaring Ocean Surge
+          // Stage 2 (1.04s -> 3.6s): Colossal Tidal Tsunami Impact & Roaring Ocean Surge
           const tWave = now + 1.04;
-          const sub = this.ctx.createOscillator();
-          sub.type = 'sine';
-          sub.frequency.setValueAtTime(98, tWave);
-          sub.frequency.exponentialRampToValueAtTime(28, tWave + 2.2);
+          const sub = this.ctx.createOscillator(); sub.type = 'sine';
+          sub.frequency.setValueAtTime(98, tWave); sub.frequency.exponentialRampToValueAtTime(28, tWave + 2.2);
           const subG = this.ctx.createGain();
           subG.gain.setValueAtTime(0.001, tWave);
           subG.gain.linearRampToValueAtTime(0.52, tWave + 0.08);
@@ -581,8 +791,7 @@
           sub.start(tWave); sub.stop(tWave + 2.4);
 
           const wSrc = this.ctx.createBufferSource(); wSrc.buffer = this.noiseBuf;
-          const wLp = this.ctx.createBiquadFilter();
-          wLp.type = 'lowpass'; wLp.Q.value = 1.4;
+          const wLp = this.ctx.createBiquadFilter(); wLp.type = 'lowpass'; wLp.Q.value = 1.4;
           wLp.frequency.setValueAtTime(220, tWave);
           wLp.frequency.exponentialRampToValueAtTime(1280, tWave + 0.45);
           wLp.frequency.exponentialRampToValueAtTime(260, tWave + 2.5);
@@ -593,17 +802,13 @@
           wSrc.connect(wLp); wLp.connect(wGain); wGain.connect(this.reverbIn);
           wSrc.start(tWave); wSrc.stop(tWave + 2.65);
         } else {
-          const osc = this.ctx.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(142, now);
-          osc.frequency.exponentialRampToValueAtTime(48, now + 1.6);
+          const osc = this.ctx.createOscillator(); osc.type = 'sine';
+          osc.frequency.setValueAtTime(142, now); osc.frequency.exponentialRampToValueAtTime(48, now + 1.6);
           const g = this.ctx.createGain();
-          g.gain.setValueAtTime(0.001, now);
-          g.gain.linearRampToValueAtTime(0.30, now + 0.10);
-          g.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
+          g.gain.setValueAtTime(0.001, now); g.gain.linearRampToValueAtTime(0.30, now + 0.10); g.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
           osc.connect(g); g.connect(this.reverbIn);
           osc.start(now); osc.stop(now + 1.75);
-          [587.33, 440, 293.66].forEach((f, idx) => setTimeout(() => this.playKoto(f, 0.14, true), idx * 120));
+          [587.33, 440, 293.66].forEach((f, idx) => this.playKoto(f, 0.13, true, now + idx * 0.12, 0.2 - idx * 0.2, true));
         }
       }
 
@@ -619,23 +824,93 @@
         rg.gain.setValueAtTime(0.001, now); rg.gain.linearRampToValueAtTime(0.24, now + 0.35); rg.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
         rumble.connect(lp); lp.connect(rg); rg.connect(this.reverbIn);
         rumble.start(now); rumble.stop(now + 3.6);
-        this.playTaiko(1.3);
+        this.playTaiko(1.3, now, true);
+        [587.33, 739.99, 880.0, 1174.66].forEach((f, idx) => {
+          this.playChime(f, 0.055, now + 0.08 + idx * 0.14, -0.45 + idx * 0.30, true);
+        });
       }
 
-      tick() {
-        if (!this.enabled) return;
-        const s = this.step % 32;
-        const noteIdx = this.kotoPattern[s];
-        const velMult = this.weather === 'snow' ? 0.85 : 1.0;
-        if (noteIdx >= 0) this.playKoto(this.kotoScale[noteIdx], ((s % 4 === 0) ? 0.16 : 0.10) * velMult, s % 8 === 3);
-        if (s % 8 === 0) { this.playKoto(146.83, 0.15, false); this.playKoto(220.00, 0.10, false); }
-        if (s === 0 || s === 16) this.playTaiko(this.weather === 'storm' ? 1.2 : 1.0);
-        else if (s === 10 || s === 26 || s === 28) this.playTaiko(0.62);
-        if (s === 0 && this.step > 0) this.playTempleGong(73.42);
-        for (const p of this.flutePhrase) {
-          if (p.step === s) this.playFlute(p.freq, p.dur, p.bend);
+      scheduler() {
+        if (!this.enabled || !this.ctx) return;
+        const lookAhead = 0.14;
+        const stepDur = this.boostActive ? 0.25 : ((this.weather === 'snow' || this.timeMode === 'night') ? 0.335 : 0.305);
+        while (this.nextNoteTime < this.ctx.currentTime + lookAhead) {
+          this.scheduleStep(this.step, this.nextNoteTime, stepDur);
+          this.nextNoteTime += stepDur;
+          this.step = (this.step + 1) % 128;
         }
-        this.step++;
+      }
+
+      scheduleStep(s, t, stepDur) {
+        const mov = Math.floor(s / 32);
+        const local = s % 32;
+        const isNight = this.timeMode === 'night' || this.weather === 'snow';
+        const isStorm = this.weather === 'storm';
+        const velMult = isNight ? 0.86 : (this.boostActive ? 1.15 : 1.0);
+
+        // Warm Silk String Pad chord every 8 steps
+        if (s % 8 === 0) {
+          const rIdx = Math.floor(s / 8) % this.roots.length;
+          this.playPadChord(this.roots[rIdx], stepDur * 8.5, isNight ? 0.058 : 0.048, t);
+        }
+
+        // Temple Gong on movement changes (0 and 64)
+        if (s === 0 || s === 64) {
+          this.playTempleGong(s === 0 ? 73.42 : 98.00, t);
+          if (s === 64) this.playCymbalSwell(stepDur * 4.5, 0.065, t);
+        }
+        if (s === 60 || s === 92) this.playCymbalSwell(stepDur * 3.8, 0.055, t);
+
+        // Main Guzheng / Koto voice + occasional sweeping glissando grace rolls
+        const noteIdx = this.kotoSeq[s];
+        if (noteIdx >= 0) {
+          const accent = (s % 4 === 0) ? 0.145 : 0.095;
+          const bend = (s % 8 === 3 || s % 16 === 11);
+          this.playKoto(this.scale[noteIdx], accent * velMult, bend, t, (s % 4 === 0) ? -0.22 : 0.15);
+          if (this.boostActive && s % 8 === 0) {
+            this.playKoto(this.scale[Math.min(10, noteIdx + 5)], accent * 0.65, false, t + stepDur * 0.5, 0.25);
+          }
+        }
+        if (local === 30 && (mov === 1 || mov === 2)) {
+          this.playKotoGliss(293.66, 4, 0.09 * velMult, t, -0.28);
+        }
+
+        // Plucked Bass Root every 8 steps
+        if (s % 8 === 0) {
+          const bFreq = this.bassSeq[Math.floor(s / 8) % this.bassSeq.length];
+          this.playKoto(bFreq, 0.145 * velMult, false, t, 0.0);
+        }
+
+        // Pipa Rhythmic Counterpoint (Movements II, III, or Boost)
+        if ((mov === 1 || mov === 2 || this.boostActive) && (s % 4 === 2 || (this.boostActive && s % 2 === 1))) {
+          const pNote = this.scale[(noteIdx >= 0 ? noteIdx + 2 : 3) % 7];
+          this.playPipa(pNote, (mov === 2 || this.boostActive ? 0.075 : 0.052) * velMult, t, 0.36);
+        }
+
+        // Soaring Bamboo Flute & Bowed Erhu solo phrases
+        const fl = this.fluteCues.get(s);
+        if (fl) this.playFlute(fl.f, fl.d * (stepDur / 0.305), fl.s, isNight ? 0.115 : 0.095, t, -0.24);
+        const eh = this.erhuCues.get(s);
+        if (eh && (!isNight || mov >= 1)) this.playErhu(eh.f, eh.d * (stepDur / 0.305), eh.n, (mov === 2 || this.boostActive ? 0.095 : 0.075), t, 0.26);
+
+        // Celestial Crystal Wind Chimes (Night, Snow, Water mode, or Movement IV)
+        if ((isNight || this.waterActive || mov === 3) && (s % 8 === 4 || (this.waterActive && s % 16 === 10))) {
+          const cFreq = this.scale[Math.min(10, 5 + ((s * 3) % 6))] * (isNight ? 2.0 : 1.0);
+          this.playChime(cFreq, 0.042, t, (s % 16 === 4) ? -0.45 : 0.45);
+        }
+
+        // Mythic Percussion: Taiko & Wooden Mokugyo Clack
+        const drumGain = isNight ? 0.65 : ((isStorm || this.boostActive) ? 1.25 : 0.95);
+        if (local === 0 || (local === 16 && mov !== 3)) {
+          this.playTaiko(drumGain, t);
+        } else if ((mov === 2 || this.boostActive) && (local === 6 || local === 12 || local === 22 || local === 28)) {
+          this.playTaiko(0.68 * drumGain, t);
+        } else if (mov !== 3 && (local === 10 || local === 26)) {
+          this.playTaiko(0.55 * drumGain, t);
+        }
+        if ((mov >= 1 && mov <= 2 && s % 4 === 2) || (this.boostActive && s % 2 === 1)) {
+          this.playWoodblock((mov === 2 || this.boostActive ? 0.058 : 0.036) * velMult, t, 0.42);
+        }
       }
     }
     const soundtrack = new EastAsianSoundtrack();
@@ -4433,6 +4708,7 @@
 
       rainWetSmooth += ((currentWeather === 'storm' ? 1.0 : 0.0) - rainWetSmooth) * Math.min(1, dt * 3.5);
       snowCoverSmooth += ((currentWeather === 'snow' ? 1.0 : 0.0) - snowCoverSmooth) * Math.min(1, dt * 1.8);
+      soundtrack.setSceneState({ time: currentTimeMode, weather: currentWeather, water: waterModeActive, boost: boostTime >= 0 || convTime >= 0 });
       const targetFogDens = currentWeather === 'fog' ? 2.35 : (currentWeather === 'clear' ? 1.0 : 1.55);
       fogDensSmooth += (targetFogDens - fogDensSmooth) * Math.min(1, dt * 2.5);
 
