@@ -2785,18 +2785,6 @@
       });
     }
 
-    const lanterns = [];
-    for (let i = 0; i < 40; i++) {
-      const ang = hash3(i, 21, 22) * Math.PI * 2, rad = 9 + hash3(i, 23, 24) * 32;
-      lanterns.push({
-        x: Math.cos(ang) * rad + (i % 5 === 0 ? 12 : 0),
-        y: 6 + hash3(i, 25, 26) * 44,
-        z: Math.sin(ang) * rad + 2,
-        speed: 0.72 + hash3(i, 27, 28) * 0.65,
-        phase: hash3(i, 29, 30) * 6.28
-      });
-    }
-
     const SAKURA_TREES = [
       [22 * VS, 25 * VS, 29 * VS],
       [68 * VS, 30 * VS, 34 * VS],
@@ -6036,22 +6024,6 @@
         }
       }
 
-      const skyLanternVis = currentTimeMode === 'night' ? 1.0 : (currentTimeMode === 'sunset' ? 0.52 : 0.0);
-      if (skyLanternVis > 0.02) {
-        for (let li = 0; li < lanterns.length; li++) {
-          const l = lanterns[li];
-          const ly = ((l.y + simTime * l.speed) % 48) + 6;
-          const fadeTop = smoothstep(54, 46, ly) * smoothstep(6, 11, ly);
-          const lx = l.x + Math.sin(simTime * 0.85 + l.phase) * 1.1;
-          const lz = l.z + Math.cos(simTime * 0.75 + l.phase) * 1.1;
-          if ((lx - eye[0]) ** 2 + (ly - eye[1]) ** 2 + (lz - eye[2]) ** 2 < 49) continue;
-          const flk = 0.85 + 0.25 * Math.sin(simTime * 9.5 + li * 2.3);
-          const scL = (0.78 + 0.22 * fadeTop) * skyLanternVis;
-          pushBox(lx, ly, lz, ID_Q, 0.46 * scL, 0.62 * scL, 0.46 * scL, [1.0, 0.66, 0.22], 1.55 * skyLanternVis * flk, 5.0);
-          pushBox(lx, ly + 0.34 * scL, lz, ID_Q, 0.50 * scL, 0.07 * scL, 0.50 * scL, [0.22, 0.14, 0.10], 0, 5.0);
-          pushBox(lx, ly - 0.28 * scL, lz, ID_Q, 0.18 * scL, 0.18 * scL, 0.18 * scL, [1.0, 0.90, 0.48], 2.5 * skyLanternVis * flk, 5.0);
-        }
-      }
       if (currentWeather === 'clear' || currentWeather === 'fog') {
         for (let q = 0; q < 24; q++) {
           const ph = (q / 24) * 6.2831853;
