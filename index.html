@@ -22,6 +22,7 @@
       margin: 0;
       padding: 0;
       width: 100%;
+      max-width: 100vw;
       height: 100%;
       background: var(--background);
       color: var(--foreground);
@@ -29,6 +30,7 @@
     }
     #app {
       width: 100%;
+      max-width: 100vw;
       height: 100%;
       height: 100dvh;
       display: flex;
@@ -36,11 +38,36 @@
       padding: 6px 8px;
       gap: 6px;
       box-sizing: border-box;
+      overflow: hidden;
+    }
+    #app > * {
+      min-width: 0;
+      max-width: 100%;
     }
     #stage {
       flex: 1 1 0%;
       min-height: 260px;
+      min-width: 0;
       width: 100%;
+    }
+    @media (max-width: 640px) {
+      #app { padding: 4px; gap: 4px; }
+      #stage { min-height: 0; }
+      .ctrl-strip {
+        width: 100%;
+        min-width: 0;
+        flex-wrap: wrap;
+        gap: 3px;
+      }
+      .ctrl-strip > div {
+        flex-wrap: wrap;
+        gap: 3px;
+        max-width: 100%;
+      }
+      .ctrl-strip .pill-btn {
+        padding: 2px 5px;
+        font-size: 10px;
+      }
     }
     canvas { touch-action: none; }
     .pill-btn {
@@ -63,17 +90,17 @@
     <div id="stage" class="relative w-full rounded-xl overflow-hidden border border-[var(--card-border)] bg-[var(--card)]">
       <canvas id="glcanvas" class="block w-full h-full cursor-grab active:cursor-grabbing"></canvas>
 
-      <div class="pointer-events-none absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 text-white/95 text-xs border border-white/15">
-        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="font-medium">Cổ Thành &amp; Tam Long</span>
-        <span id="voxel-badge" class="text-white/80 font-mono text-[11px] pl-1 border-l border-white/20">Đang dựng khối...</span>
+      <div class="pointer-events-none absolute top-2 left-2 max-w-[calc(100%-92px)] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 text-white/95 text-xs border border-white/15 truncate">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+        <span class="font-medium shrink-0">Cổ Thành &amp; Tứ Linh</span>
+        <span id="voxel-badge" class="text-white/80 font-mono text-[11px] pl-1 border-l border-white/20 truncate">Đang dựng khối...</span>
       </div>
 
-      <button id="btn-fs" title="Toàn màn hình" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
+      <button id="btn-fs" title="Toàn màn hình" class="absolute top-2 right-2 px-2.5 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
         Phóng to
       </button>
 
-      <div class="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 text-white/90 text-[11px] border border-white/15">
+      <div class="absolute bottom-2 left-2 max-w-[calc(100%-16px)] flex flex-wrap items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 text-white/90 text-[10px] sm:text-[11px] border border-white/15">
         <span class="text-white/70">Theo:</span>
         <button data-follow="green" class="follow-btn px-1.5 rounded font-medium bg-emerald-600 text-white transition">Thanh Long</button>
         <button data-follow="white" class="follow-btn px-1.5 rounded font-medium text-cyan-200 hover:bg-white/15 transition">Bạch Long</button>
@@ -82,13 +109,13 @@
         <button data-follow="xuanwu" class="follow-btn px-1.5 rounded font-medium text-teal-300 hover:bg-white/15 transition">Huyền Vũ</button>
       </div>
 
-      <div class="pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15">
-        F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc
+      <div class="hidden md:block pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15">
+        F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc · X Huyền Vũ
       </div>
     </div>
 
     <div class="space-y-1 text-[11px] px-0.5 shrink-0">
-      <div class="flex flex-wrap items-center justify-between gap-1">
+      <div class="ctrl-strip flex flex-wrap items-center justify-between gap-1">
         <div class="flex items-center gap-1 flex-wrap">
           <span class="text-[var(--muted-foreground)]">Sáng:</span>
           <button data-time="sunset" class="time-btn pill-btn px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)] font-medium">Hoàng hôn</button>
@@ -100,10 +127,10 @@
           <button data-weather="storm" class="wx-btn pill-btn px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Trời giông</button>
           <button data-weather="snow" class="wx-btn pill-btn px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Trời tuyết</button>
         </div>
-        <button id="btn-audio" class="pill-btn px-2.5 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 font-medium">Nhạc nền: Tắt</button>
+        <button id="btn-audio" class="pill-btn px-2.5 py-0.5 rounded border border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 font-medium shrink-0">Nhạc nền: Tắt</button>
       </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-1">
+      <div class="ctrl-strip flex flex-wrap items-center justify-between gap-1">
         <div class="flex items-center gap-1 flex-wrap">
           <span class="text-[var(--muted-foreground)]">Góc:</span>
           <button data-cam="render" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)] font-medium">Chuẩn</button>
@@ -113,6 +140,7 @@
           <button data-cam="pagoda" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Cổ Tháp</button>
         </div>
         <div class="flex items-center gap-1 flex-wrap">
+          <button id="btn-xuanwu" class="pill-btn px-1.5 py-0.5 rounded border border-teal-400/75 bg-teal-500/20 hover:bg-teal-500/35 text-teal-300 font-semibold">Huyền Vũ (X)</button>
           <button id="btn-converge" class="pill-btn px-1.5 py-0.5 rounded border border-purple-500/70 bg-purple-500/20 hover:bg-purple-500/35 text-purple-400 font-semibold">Hợp Kích (G)</button>
           <button id="btn-boost" class="pill-btn px-1.5 py-0.5 rounded border border-red-500/75 bg-red-600/20 hover:bg-red-600/35 text-red-400 font-semibold">Bức Tốc (H)</button>
           <button id="btn-phoenix" class="pill-btn px-1.5 py-0.5 rounded border border-rose-500/70 bg-rose-500/20 hover:bg-rose-500/35 text-rose-400 font-semibold">Phượng (P)</button>
@@ -134,6 +162,7 @@
     const btnSnow = document.getElementById('btn-snow');
     const btnBolt = document.getElementById('btn-bolt');
     const btnPhoenix = document.getElementById('btn-phoenix');
+    const btnXuanwu = document.getElementById('btn-xuanwu');
     const btnConverge = document.getElementById('btn-converge');
     const btnBoost = document.getElementById('btn-boost');
     const btnAudio = document.getElementById('btn-audio');
@@ -474,6 +503,24 @@
         }, 1600);
       }
 
+      playXuanwuWater(on = true) {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(on ? 110 : 146, now);
+        osc.frequency.exponentialRampToValueAtTime(on ? 65 : 82, now + 1.8);
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.001, now);
+        g.gain.linearRampToValueAtTime(0.32, now + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+        osc.connect(g); g.connect(this.reverbIn);
+        osc.start(now); osc.stop(now + 2.1);
+        const notes = on ? [440, 587.33, 739.99, 880] : [587.33, 440, 329.63];
+        notes.forEach((f, idx) => setTimeout(() => this.playKoto(f, 0.14, true), idx * 110));
+      }
+
       playCrimsonBoostClimax() {
         this.playPhoenixCry();
         if (!this.ctx) return;
@@ -756,6 +803,10 @@
     uniform int uLightCount;
     uniform sampler2D uShadowMap;
     uniform float uUseShadow;
+    uniform float uSeaWater;
+    uniform float uWaterWaveR;
+    uniform float uSeaSummonFlash;
+    uniform vec2 uXuanwuPos;
 
     float hash31(vec3 p) {
       p = fract(p * 0.1031);
@@ -804,6 +855,61 @@
       float dist = length(camVec);
       bool nearDetail = dist < 86.0;
       bool nearLit = dist < 114.0;
+
+      vec2 camDeltaXZ = worldPos.xz - uXuanwuPos;
+      float distXuanwu = length(camDeltaXZ);
+      float isOceanFloor = (style > 7.5) ? 1.0 : 0.0;
+
+      if (isOceanFloor > 0.5) {
+        if (uSeaWater < 0.01) {
+          float abyssFog = clamp(exp(-5.0 * 0.36) * 0.76, 0.0, 0.92);
+          float distFog0 = clamp(1.0 - exp(-pow(max(dist - (84.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
+          outColor = mix(baseCol * (uAmbientColor + uSunColor * 0.22), mix(uFogColor, uFogHorizon, 0.68), clamp(abyssFog + distFog0, 0.0, 0.94));
+          outGlow = vec3(0.0);
+          return;
+        }
+        float phA = dot(worldPos.xz, vec2(0.86, 0.51)) * 0.38 + uTime * 2.15;
+        float phB = dot(worldPos.xz, vec2(-0.56, 0.83)) * 0.52 - uTime * 1.75;
+        float phC = dot(worldPos.xz, vec2(0.32, -0.95)) * 1.05 + uTime * 2.85;
+        float wave1 = sin(phA) * 0.58 + sin(phB) * 0.42;
+        float wave2 = sin(phC) * 0.50 + 0.50 * sin(phA * 1.7 - phB * 1.3);
+        float swell = sin(worldPos.x * 0.24 + uTime * 1.85) * cos(worldPos.z * 0.22 - uTime * 1.45);
+        float nxG = 0.20 * cos(phA) * 0.86 - 0.16 * cos(phB) * 0.56 + 0.10 * cos(phC) * 0.32;
+        float nzG = 0.20 * cos(phA) * 0.51 + 0.16 * cos(phB) * 0.83 - 0.10 * cos(phC) * 0.95;
+        float wakeRing = exp(-max(distXuanwu - 3.6, 0.0) * 0.13) * (0.35 + 0.65 * pow(0.5 + 0.5 * sin(distXuanwu * 1.65 - uTime * 4.4), 2.0));
+        float shockRing = exp(-abs(distXuanwu - uWaterWaveR) * 0.22) * uSeaSummonFlash;
+        N = normalize(vec3(nxG, 1.0, nzG));
+
+        vec3 L = normalize(uSunDir);
+        float sh = computeShadow(shadowCoord, max(N.y, 0.1));
+        vec3 V = camVec / max(dist, 0.0001);
+        vec3 H = normalize(L + V);
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.6);
+        float ndlW = max(dot(N, L), 0.0);
+
+        float shoreWobble = sin(worldPos.x * 0.14) * 2.4 + cos(worldPos.z * 0.15) * 2.2;
+        float shoreDist = length(worldPos.xz * vec2(1.0, 1.04)) + shoreWobble;
+        float shoreBand = exp(-abs(shoreDist - 39.2) * 0.38) * (0.45 + 0.55 * sin(shoreDist * 1.45 - uTime * 2.8 + wave1 * 1.6));
+        float crestStreak = pow(clamp(0.5 + 0.5 * sin(phA * 0.92 + sin(phB * 0.65) * 0.85), 0.0, 1.0), 7.5);
+        float crestGate = smoothstep(0.18, 0.86, 0.5 + 0.5 * sin(phB * 0.68 + cos(phA * 0.35)));
+        float ridgeFoam = crestStreak * crestGate * 0.55;
+        float foamCrest = clamp(ridgeFoam + wakeRing * 0.68 + shoreBand * 0.52 + shockRing * 0.95, 0.0, 0.96);
+
+        vec3 deepWater = vec3(0.03, 0.24, 0.44);
+        vec3 midWater = vec3(0.08, 0.50, 0.66);
+        vec3 sssWater = vec3(0.14, 0.72, 0.78) * pow(max(dot(V, -L), 0.0), 2.5) * 0.34 * uSunColor;
+        vec3 wCol = mix(deepWater, midWater, clamp(0.45 + 0.42 * swell + wave1 * 0.20, 0.0, 1.0));
+        wCol *= (uAmbientColor * 1.25 + uSunColor * (ndlW * 0.78 * sh + 0.18));
+        wCol += sssWater + mix(uFogHorizon, uFogColor, 0.38) * fres * 0.68;
+        wCol += uSunColor * pow(max(dot(N, H), 0.0), 92.0) * 1.35 * sh;
+        wCol = mix(wCol, vec3(0.86, 0.97, 1.00), foamCrest * uSeaWater);
+
+        float mistRem = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * (1.0 - uSeaWater * 0.92);
+        float distFogW = clamp(1.0 - exp(-pow(max(dist - (88.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.88);
+        outColor = mix(wCol, mix(uFogColor, uFogHorizon, 0.55), clamp(mistRem + distFogW, 0.0, 0.90));
+        outGlow = vec3(0.18, 0.86, 0.96) * clamp(wakeRing * 0.22 + shockRing * 0.65, 0.0, 0.85) + uSunColor * pow(max(dot(N, H), 0.0), 92.0) * 0.28 * sh;
+        return;
+      }
 
       if (isWater > 0.5) {
         if (inN.y > 0.5) {
@@ -896,6 +1002,13 @@
         }
       }
 
+      if (uSeaWater > 0.04 && isWater < 0.5 && style < 6.5 && worldPos.y < -5.8) {
+        float tideMask = smoothstep(-5.8, -8.4, worldPos.y) * uSeaWater;
+        float causticLine = pow(max(0.0, sin(worldPos.x * 2.2 + uTime * 3.1) * cos(worldPos.z * 2.2 - uTime * 2.6)), 2.0);
+        col = mix(col, col * 0.62 + vec3(0.10, 0.62, 0.74) * causticLine * 0.35, tideMask * 0.75);
+        specBoost += tideMask * 0.52;
+      }
+
       vec3 L = normalize(uSunDir);
       float geomNdl = dot(inN, L);
       float shadow = computeShadow(shadowCoord, geomNdl);
@@ -942,7 +1055,7 @@
       vec3 lit = clamp(col, 0.0, 1.0) * (amb + bounceFill + dirLight + flashLight + ptLight + uSunColor * leafTranslucency) * ao * microAO * bevel + uSunColor * spec + rimLight + skyRefl + mix(uFogHorizon, vec3(0.42, 0.70, 0.92), 0.55) * waterFres;
 
       float mistSwirl = 0.88 + 0.12 * sin(worldPos.x * 0.12 + uTime * 0.35) * cos(worldPos.z * 0.11 - uTime * 0.28);
-      float canyonMist = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * mistSwirl;
+      float canyonMist = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * mistSwirl * (1.0 - uSeaWater * 0.90);
       float distFog = clamp(1.0 - exp(-pow(max(dist - (84.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
       float fogAmt = clamp(canyonMist + distFog, 0.0, 0.92);
       vec3 fogTarget = mix(uFogColor, mix(uFogColor, uFogHorizon, 0.68), clamp(canyonMist, 0.0, 0.78));
@@ -962,6 +1075,11 @@
     uniform mat4 uProj;
     uniform mat4 uView;
     uniform mat4 uLightVP;
+    uniform float uTime;
+    uniform float uSeaWater;
+    uniform float uWaterWaveR;
+    uniform float uSeaSummonFlash;
+    uniform vec2 uXuanwuPos;
 
     out vec3 vWorldPos;
     out vec3 vNormal;
@@ -973,11 +1091,21 @@
     out vec3 vShadowCoord;
 
     void main() {
-      vWorldPos = aPos; vNormal = aNormal; vUV = aUV;
+      vec3 p = aPos;
+      if (aStyle > 7.5 && uSeaWater > 0.005) {
+        float dXw = length(p.xz - uXuanwuPos);
+        float radWave = clamp((uWaterWaveR - dXw) * 0.085, 0.0, 1.0);
+        float rise = uSeaWater * (0.26 + 0.74 * radWave);
+        float w1 = sin(p.x * 0.24 + uTime * 1.85) * cos(p.z * 0.22 - uTime * 1.45);
+        float w2 = sin((p.x * 0.6 + p.z * 0.8) * 0.32 - uTime * 2.35);
+        float crest = sin(clamp(1.0 - abs(dXw - uWaterWaveR) * 0.12, 0.0, 1.0) * 3.14159);
+        p.y = -13.5 + rise * 5.75 + (w1 * 0.34 + w2 * 0.22) * rise + crest * uSeaSummonFlash * 1.15;
+      }
+      vWorldPos = p; vNormal = aNormal; vUV = aUV;
       vColor = aColor; vAO = aAO; vEmissive = aEmissive; vStyle = aStyle;
-      vec4 sc = uLightVP * vec4(aPos, 1.0);
+      vec4 sc = uLightVP * vec4(p, 1.0);
       vShadowCoord = sc.xyz / sc.w * 0.5 + 0.5;
-      gl_Position = uProj * uView * vec4(aPos, 1.0);
+      gl_Position = uProj * uView * vec4(p, 1.0);
     }`;
 
     const staticFS = `#version 300 es
@@ -1206,7 +1334,7 @@
     const uSky = getUniforms(skyProg, ['uSkyTop','uSkyMid','uSkyHorizon','uSunDir','uSunColor','uStarAmount','uSunVis','uLightning','uCrimsonGlow','uTime','uCamRight','uCamUp','uCamFwd','uTanHalfFov','uAspect']);
     const uShSt = getUniforms(shadowStaticProg, ['uLightVP']);
     const uShIn = getUniforms(shadowInstProg, ['uLightVP']);
-    const sceneUniformNames = ['uProj','uView','uLightVP','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uRainWetness','uSnowCover','uFogDensity','uLightning','uLightPos[0]','uLightCol[0]','uLightRange[0]','uLightCount','uShadowMap','uUseShadow'];
+    const sceneUniformNames = ['uProj','uView','uLightVP','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uRainWetness','uSnowCover','uFogDensity','uLightning','uLightPos[0]','uLightCol[0]','uLightRange[0]','uLightCount','uShadowMap','uUseShadow','uSeaWater','uWaterWaveR','uSeaSummonFlash','uXuanwuPos'];
     const uSt = getUniforms(staticProg, sceneUniformNames);
     const uIn = getUniforms(instProg, sceneUniformNames);
     const uWx = getUniforms(wxProg, ['uProj','uView','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uFogDensity','uLightning']);
@@ -1839,8 +1967,22 @@
       }
     }
 
-    // Misty Sea Floor & Canyon Haze Floor
-    addWorldBox(0, -14.5, 0, 320, 2.0, 320, [0.34, 0.39, 0.50], 1.0, 5);
+    // Tessellated Living Ocean & Misty Abyss Floor Surface (animates upward into rolling waves when Xuanwu summons water!)
+    (() => {
+      const N_OC = 64, HALF = 160.0, STEP = (HALF * 2) / N_OC, BASE_Y = -13.5;
+      const ocCol = [0.34, 0.39, 0.50];
+      for (let iz = 0; iz < N_OC; iz++) {
+        const z0 = -HALF + iz * STEP, z1 = z0 + STEP;
+        for (let ix = 0; ix < N_OC; ix++) {
+          const x0 = -HALF + ix * STEP, x1 = x0 + STEP;
+          const pts = [[x0, BASE_Y, z1], [x1, BASE_Y, z1], [x1, BASE_Y, z0], [x0, BASE_Y, z0]];
+          for (const ti of [0, 1, 2, 0, 2, 3]) {
+            const c = pts[ti], uv = UV_QUAD[ti];
+            pushVert(c[0], c[1], c[2], 0, 1, 0, uv[0], uv[1], ocCol[0], ocCol[1], ocCol[2], 1.0, 0.0, 8.0);
+          }
+        }
+      }
+    })();
 
     // Floating Satellite Sky-Islets (Stepped Karst Crags, Sanctuaries & Mist Cascades)
     const SATELLITE_ISLES = [
@@ -2108,7 +2250,7 @@
 
     const seaClouds = [];
     for (let i = 0; i < 18; i++) {
-      const ang = (i / 18) * Math.PI * 2, rad = 64 + hash3(i, 71, 3) * 32;
+      const ang = (i / 18) * Math.PI * 2, rad = 76 + hash3(i, 71, 3) * 28;
       seaClouds.push({
         x: Math.cos(ang) * rad, y: -12.4 + hash3(i, 72, 4) * 3.8, z: Math.sin(ang) * rad,
         sx: 6.5 + hash3(i, 73, 5) * 6.0, sy: 1.6 + hash3(i, 74, 6) * 1.4, sz: 5.5 + hash3(i, 75, 7) * 5.0,
@@ -2245,6 +2387,33 @@
       else if (st.t > st.dur - 0.7) { st.t = Math.min(st.t, st.dur - 0.95); }
       boltBurstTimer = Math.max(boltBurstTimer, duration);
     }
+    let waterModeActive = location.hash.includes('water');
+    let waterCoverSmooth = waterModeActive ? 1.0 : 0.0;
+    let waterWaveRadius = waterModeActive ? 220.0 : 0.0;
+    let xuanwuBurstTimer = 0.0;
+
+    function syncXuanwuButton() {
+      btnXuanwu.className = `pill-btn px-1.5 py-0.5 rounded border font-semibold ${
+        waterModeActive
+          ? 'border-teal-300 bg-teal-500 text-white shadow-sm'
+          : 'border-teal-400/75 bg-teal-500/20 hover:bg-teal-500/35 text-teal-300'
+      }`;
+      btnXuanwu.textContent = waterModeActive ? 'Biển Nước (X)' : 'Huyền Vũ (X)';
+    }
+    syncXuanwuButton();
+
+    function triggerXuanwuWater() {
+      waterModeActive = !waterModeActive;
+      if (waterModeActive) {
+        waterWaveRadius = 2.5;
+        xuanwuBurstTimer = 2.6;
+      } else {
+        xuanwuBurstTimer = 1.1;
+      }
+      syncXuanwuButton();
+      soundtrack.playXuanwuWater(waterModeActive);
+    }
+
     function triggerPhoenixFlight() {
       if (phoenixTime < 0) {
         phoenixTime = 0;
@@ -2288,6 +2457,7 @@
     btnSnow.addEventListener('pointerdown', () => { snowKeyHeld = true; breathAnim.white.held = true; triggerSnowBurst(3.45); });
     btnBolt.addEventListener('pointerdown', () => { boltKeyHeld = true; breathAnim.black.held = true; triggerBoltBurst(3.05); });
     btnPhoenix.addEventListener('click', () => triggerPhoenixFlight());
+    btnXuanwu.addEventListener('click', () => triggerXuanwuWater());
     btnBoost.addEventListener('click', () => triggerCrimsonBoost());
     btnConverge.addEventListener('click', () => triggerConvergence());
     window.addEventListener('pointerup', () => { fireKeyHeld = snowKeyHeld = boltKeyHeld = false; breathAnim.green.held = breathAnim.white.held = breathAnim.black.held = false; });
@@ -2296,6 +2466,7 @@
       if ((e.key === 't' || e.key === 'T') && !e.repeat) { snowKeyHeld = true; breathAnim.white.held = true; triggerSnowBurst(3.45); }
       if ((e.key === 's' || e.key === 'S') && !e.repeat) { boltKeyHeld = true; breathAnim.black.held = true; triggerBoltBurst(3.05); }
       if ((e.key === 'p' || e.key === 'P') && !e.repeat) { triggerPhoenixFlight(); }
+      if ((e.key === 'x' || e.key === 'X') && !e.repeat) { triggerXuanwuWater(); }
       if ((e.key === 'h' || e.key === 'H') && !e.repeat) { triggerCrimsonBoost(); }
       if ((e.key === 'g' || e.key === 'G') && !e.repeat) { triggerConvergence(); }
     });
@@ -2641,15 +2812,42 @@
     let fogDensSmooth = currentWeather === 'fog' ? 2.35 : (currentWeather === 'clear' ? 1.0 : 1.45);
 
     // ---------- Camera & Controls ----------
-    const cam = { yaw: 0.46, pitch: 0.24, dist: 104, target: [0, 15, 2], dragging: false, panning: false, lastX: 0, lastY: 0 };
+    const isPortraitView = window.innerHeight > window.innerWidth * 1.05;
+    const cam = {
+      yaw: isPortraitView ? 0.50 : 0.46,
+      pitch: isPortraitView ? 0.27 : 0.24,
+      dist: isPortraitView ? 174 : (window.innerWidth < 768 ? 124 : 104),
+      target: isPortraitView ? [6, 9, -2] : [0, 14, 2],
+      dragging: false, panning: false, lastX: 0, lastY: 0
+    };
+    const activePtrs = new Map();
+    let lastPinchDist = null;
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
       canvas.setPointerCapture(e.pointerId);
-      cam.dragging = true; cam.panning = (e.button === 2 || e.shiftKey);
-      cam.lastX = e.clientX; cam.lastY = e.clientY;
+      activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePtrs.size === 1) {
+        cam.dragging = true; cam.panning = (e.button === 2 || e.shiftKey);
+        cam.lastX = e.clientX; cam.lastY = e.clientY;
+        lastPinchDist = null;
+      } else if (activePtrs.size === 2) {
+        const pts = [...activePtrs.values()];
+        lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        cam.dragging = false;
+      }
     });
     canvas.addEventListener('pointermove', e => {
+      if (activePtrs.has(e.pointerId)) activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePtrs.size === 2) {
+        const pts = [...activePtrs.values()];
+        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (lastPinchDist !== null && d > 4) {
+          cam.dist = clamp(cam.dist * (lastPinchDist / d), 16, 225);
+        }
+        lastPinchDist = d;
+        return;
+      }
       if (!cam.dragging) return;
       const dx = e.clientX - cam.lastX, dy = e.clientY - cam.lastY;
       cam.lastX = e.clientX; cam.lastY = e.clientY;
@@ -2663,9 +2861,19 @@
         cam.pitch = clamp(cam.pitch + dy * 0.007, -0.35, 1.38);
       }
     });
-    canvas.addEventListener('pointerup', () => { cam.dragging = false; });
-    canvas.addEventListener('pointercancel', () => { cam.dragging = false; });
-    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 155); }, { passive: false });
+    function releasePtr(e) {
+      activePtrs.delete(e.pointerId);
+      if (activePtrs.size < 2) lastPinchDist = null;
+      if (activePtrs.size === 1) {
+        const p = [...activePtrs.values()][0];
+        cam.dragging = true; cam.lastX = p.x; cam.lastY = p.y;
+      } else if (activePtrs.size === 0) {
+        cam.dragging = false;
+      }
+    }
+    canvas.addEventListener('pointerup', releasePtr);
+    canvas.addEventListener('pointercancel', releasePtr);
+    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 225); }, { passive: false });
 
     function syncTimeButtons() {
       document.querySelectorAll('.time-btn').forEach(b => {
@@ -2720,10 +2928,12 @@
 
     document.querySelectorAll('.cam-btn').forEach(btn => btn.addEventListener('click', () => {
       currentCamMode = btn.dataset.cam;
-      if (currentCamMode === 'render') { cam.yaw = 0.46; cam.pitch = 0.24; cam.dist = 104; cam.target = [0, 15, 2]; }
-      else if (currentCamMode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = 108; cam.target = [2, 15, 0]; }
-      else if (currentCamMode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = 52; cam.target = [-6, 4, 20]; }
-      else if (currentCamMode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = 70; cam.target = [24, 15, -10]; }
+      const camAsp = (canvas.clientWidth || window.innerWidth) / Math.max(canvas.clientHeight || window.innerHeight, 1);
+      const isPort = camAsp < 1.0;
+      if (currentCamMode === 'render') { cam.yaw = isPort ? 0.50 : 0.46; cam.pitch = isPort ? 0.27 : 0.24; cam.dist = isPort ? 174 : (window.innerWidth < 768 ? 124 : 104); cam.target = isPort ? [6, 9, -2] : [0, 14, 2]; }
+      else if (currentCamMode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = Math.round(108 * (isPort ? 1.62 : 1.0)); cam.target = isPort ? [4, 10, -1] : [2, 13, 0]; }
+      else if (currentCamMode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = Math.round(52 * (isPort ? 1.48 : 1.0)); cam.target = [-6, 4, 20]; }
+      else if (currentCamMode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = Math.round(70 * (isPort ? 1.46 : 1.0)); cam.target = [24, 15, -10]; }
       syncCamButtons(); syncFollowButtons();
     }));
 
@@ -3421,11 +3631,17 @@
     }
 
     const XUANWU_CFG = {
-      theta: 0.04, speed: 0.042, swimPhase: 0.0, snakePhase: 0.0,
-      orbitFn: th => [Math.cos(th) * 48.0, -7.5, Math.sin(th) * 44.5 + 1.5]
+      theta: -0.26, speed: 0.042, swimPhase: 0.0, snakePhase: 0.0, summonBoost: 0.0,
+      orbitFn: th => {
+        const lobe = 4.8 * Math.pow(Math.sin(2.0 * th), 2.0);
+        const frontB = 2.5 * Math.max(0, Math.sin(th));
+        const rx = 54.0 + lobe + 1.6 * Math.sin(th);
+        const rz = 52.0 + lobe + frontB;
+        return [Math.cos(th) * rx, -7.5, Math.sin(th) * rz + 1.5];
+      }
     };
 
-    function drawXuanwu(xwCfg, time, nightGlowMult, boostIntensity = 0) {
+    function drawXuanwu(xwCfg, time, nightGlowMult, boostIntensity = 0, waterStrength = 0, summonRamp = 0) {
       const th = xwCfg.theta;
       const baseP = xwCfg.orbitFn(th);
       const aheadP = xwCfg.orbitFn(th + 0.05);
@@ -3434,8 +3650,8 @@
       const swP = xwCfg.swimPhase, snP = xwCfg.snakePhase;
       const nightM = currentTimeMode === 'night' ? 1.52 : 1.0;
 
-      const bob = Math.sin(swP * 0.72) * 0.30;
-      const pitch = Math.sin(swP * 0.55) * 0.028;
+      const bob = Math.sin(swP * 0.72) * (0.30 + waterStrength * 0.16) + summonRamp * 0.85;
+      const pitch = Math.sin(swP * 0.55) * 0.028 + summonRamp * 0.11;
       const roll = Math.cos(swP * 0.48) * 0.024;
       const cp = Math.cos(pitch), sp = Math.sin(pitch);
       const rawU0 = [0, 1, 0];
@@ -3454,8 +3670,8 @@
       const tRune = [0.14, 0.90, 0.96];
       const tEye = [0.35, 0.97, 1.00];
       const tClaw = [0.88, 0.84, 0.66];
-      const emRune = (1.08 + boostIntensity * 0.45) * nightM;
-      const emGold = (0.18 + boostIntensity * 0.20) * nightM;
+      const emRune = (1.08 + boostIntensity * 0.45 + summonRamp * 0.95 + waterStrength * 0.22) * nightM;
+      const emGold = (0.18 + boostIntensity * 0.20 + summonRamp * 0.25) * nightM;
 
       function xBox(f, r, u, sx, sy, sz, col, em = 0, st = 7.0, q = shellQ) {
         pushBox(
@@ -3671,15 +3887,27 @@
         sHBox(1.22, 0.32 * s, -0.16, 0.14, 0.38, 0.14, [0.99, 0.98, 0.94], 0.18, 5.0);
       }
 
-      // Swirling Cyan-White Mist Ripples & Buoyancy Wake around Tortoise Hull
+      // Swirling Mist Ripples & Animated Ocean Spray Wake around Tortoise Hull
       for (let w = 0; w < 8; w++) {
-        const wf = ((time * 0.45 + w / 8) % 1.0);
-        const wBack = -1.5 - wf * 7.8;
-        const wLat = (w % 2 === 0 ? 1 : -1) * (2.6 + wf * 3.8 + Math.sin(time * 2.0 + w) * 0.5);
-        const wScale = 1.8 + wf * 3.2;
-        pushWxBox(shellC[0] + fwd[0] * wBack + right[0] * wLat, baseP[1] + 0.15 + wf * 0.6, shellC[2] + fwd[2] * wBack + right[2] * wLat, ID_Q, wScale, 0.48, wScale, [0.46, 0.88, 0.96], 0.14 * (1 - wf) * nightM, 3.0);
+        const wf = ((time * (0.45 + waterStrength * 0.35) + w / 8) % 1.0);
+        const wBack = -1.5 - wf * 8.2;
+        const wLat = (w % 2 === 0 ? 1 : -1) * (2.6 + wf * 4.2 + Math.sin(time * 2.0 + w) * 0.5);
+        const wScale = (1.8 + wf * 3.4) * (1.0 + waterStrength * 0.25);
+        const wakeCol = waterStrength > 0.3 ? [0.68, 0.95, 1.00] : [0.46, 0.88, 0.96];
+        pushWxBox(shellC[0] + fwd[0] * wBack + right[0] * wLat, baseP[1] + 0.15 + wf * 0.6, shellC[2] + fwd[2] * wBack + right[2] * wLat, ID_Q, wScale, 0.48, wScale, wakeCol, (0.14 + waterStrength * 0.14) * (1 - wf) * nightM, 3.0);
       }
-      return { shellC, fwd, right, up, serpentHead: shEnd };
+      if (waterStrength > 0.05 || summonRamp > 0.05) {
+        const sprayAmt = Math.max(waterStrength * 0.55, summonRamp);
+        for (let sp = 0; sp < 14; sp++) {
+          const ph = ((time * (1.45 + summonRamp * 1.1) + sp / 14) % 1.0);
+          const ang = (sp / 14) * Math.PI * 2 + swP * 0.4;
+          const distR = 4.6 + ph * (3.8 + summonRamp * 5.2);
+          const arcY = -0.35 + Math.sin(ph * Math.PI) * (1.8 + summonRamp * 3.4);
+          const sz = (0.34 + 0.22 * (1 - ph)) * (0.7 + sprayAmt * 0.6);
+          pushBox(shellC[0] + Math.cos(ang) * distR, baseP[1] + arcY, shellC[2] + Math.sin(ang) * distR, ID_Q, sz, sz, sz, ph < 0.4 ? [0.82, 0.98, 1.0] : [0.32, 0.86, 0.96], (0.55 + summonRamp * 1.2) * (1 - ph) * nightM, 5.0);
+        }
+      }
+      return { shellC, baseP, fwd, right, up, serpentHead: shEnd };
     }
 
     const SNOW_QUATS = Array.from({ length: 24 }, () => [0, 0, 0, 1]);
@@ -3912,9 +4140,15 @@
       }`;
 
       if (playing) {
-        XUANWU_CFG.theta += XUANWU_CFG.speed * (1.0 + boostRamp * 0.85) * dt;
-        XUANWU_CFG.swimPhase += dt * (1.75 + boostRamp * 0.95);
-        XUANWU_CFG.snakePhase += dt * (1.35 + boostRamp * 0.85);
+        if (xuanwuBurstTimer > 0) xuanwuBurstTimer = Math.max(0, xuanwuBurstTimer - dt);
+        const wTarget = waterModeActive ? 1.0 : 0.0;
+        waterCoverSmooth += (wTarget - waterCoverSmooth) * Math.min(1, dt * 1.9);
+        if (waterModeActive) waterWaveRadius = Math.min(230.0, waterWaveRadius + dt * 92.0);
+        const xwSumBoost = xuanwuBurstTimer > 0 ? Math.sin(Math.min(1, xuanwuBurstTimer / 2.2) * Math.PI) : 0;
+        XUANWU_CFG.summonBoost = xwSumBoost;
+        XUANWU_CFG.theta += XUANWU_CFG.speed * (1.0 + boostRamp * 0.85 + xwSumBoost * 0.45) * dt;
+        XUANWU_CFG.swimPhase += dt * (1.75 + boostRamp * 0.95 + xwSumBoost * 1.65);
+        XUANWU_CFG.snakePhase += dt * (1.35 + boostRamp * 0.85 + xwSumBoost * 1.85);
         const pairList = [
           [DRAGON_CONFIGS.green, poseGreen.active ? poseGreen.swimBoost : 0],
           [DRAGON_CONFIGS.white, poseWhite.active ? poseWhite.swimBoost : 0],
@@ -4143,6 +4377,8 @@
       }
 
       // Camera + Earth-Shaking Tremor + Butter-Smooth Follow Mode (3 Dragons + Fire Phoenix!)
+      const aspect = fboW / fboH;
+      const followZoomScale = aspect < 1.0 ? clamp(0.86 / Math.max(aspect, 0.44), 1.0, 1.52) : 1.0;
       let target = [...cam.target];
       let eye;
       if (currentCamMode === 'dragon') {
@@ -4156,14 +4392,14 @@
           const outRad = [xBase[0] / rlX, 0, xBase[2] / rlX];
           desiredTarget = [xBase[0], xBase[1] + 3.4, xBase[2]];
           desiredEye = [
-            xBase[0] + xF[0] * 13.5 + outRad[0] * 15.8,
-            xBase[1] + 8.6,
-            xBase[2] + xF[2] * 13.5 + outRad[2] * 15.8
+            xBase[0] + xF[0] * 13.5 * followZoomScale + outRad[0] * 15.8 * followZoomScale,
+            xBase[1] + 8.6 * (0.75 + 0.25 * followZoomScale),
+            xBase[2] + xF[2] * 13.5 * followZoomScale + outRad[2] * 15.8 * followZoomScale
           ];
         } else if (followDragonKey === 'phoenix') {
           if (phoenixTime < 0) {
             const perchR = norm3(cross([0, 1, 0], perchFwd));
-            const pb = 11.2 + boostRamp * 4.4;
+            const pb = (11.2 + boostRamp * 4.4) * followZoomScale;
             desiredTarget = [phPos[0], phPos[1] + 4.3 + boostRamp * 1.1, phPos[2]];
             desiredEye = [
               phPos[0] + perchFwd[0] * pb + perchR[0] * (pb + 0.4),
@@ -4174,9 +4410,9 @@
             const chaseR = norm3(cross([0, 1, 0], phFwd));
             desiredTarget = [phPos[0] + phFwd[0] * 1.5, phPos[1] + 1.0, phPos[2] + phFwd[2] * 1.5];
             desiredEye = [
-              phPos[0] - phFwd[0] * 9.5 + chaseR[0] * 17.5,
-              phPos[1] + 5.8,
-              phPos[2] - phFwd[2] * 9.5 + chaseR[2] * 17.5
+              phPos[0] - phFwd[0] * 9.5 * followZoomScale + chaseR[0] * 17.5 * followZoomScale,
+              phPos[1] + 5.8 * (0.78 + 0.22 * followZoomScale),
+              phPos[2] - phFwd[2] * 9.5 * followZoomScale + chaseR[2] * 17.5 * followZoomScale
             ];
           }
         } else {
@@ -4194,10 +4430,10 @@
             [0, fH[1] - 1.0, 0],
             0.04
           );
-          const distSide = mix(15.5, 22.5, followBreathZoom), distFwd = mix(12.2, 5.2, followBreathZoom);
+          const distSide = mix(15.5, 22.5, followBreathZoom) * followZoomScale, distFwd = mix(12.2, 5.2, followBreathZoom) * followZoomScale;
           desiredEye = [
             fFocus[0] + radOut[0] * distSide + fF[0] * distFwd,
-            fFocus[1] + mix(3.4, 2.6, followBreathZoom),
+            fFocus[1] + mix(3.4, 2.6, followBreathZoom) * (0.8 + 0.2 * followZoomScale),
             fFocus[2] + radOut[2] * distSide + fF[2] * distFwd
           ];
         }
@@ -4227,8 +4463,11 @@
         target[0] += sx * 0.65; target[1] += sy * 0.65;
       }
 
-      const aspect = fboW / fboH, fov = 0.72;
-      const proj = mat4Perspective(fov, aspect, 0.6, 280.0);
+      const baseFovY = 0.72;
+      const fov = aspect < 1.35
+        ? clamp(2.0 * Math.atan(Math.tan(baseFovY * 0.5) * (1.35 / Math.max(aspect, 0.42))), baseFovY, 1.42)
+        : baseFovY;
+      const proj = mat4Perspective(fov, aspect, 0.6, 360.0);
       const view = mat4LookAt(eye, target, [0, 1, 0]);
       const camFwd = norm3(sub(target, eye));
       const camRight = norm3(cross(camFwd, [0, 1, 0]));
@@ -4246,7 +4485,7 @@
       drawDragon(skelBlack, DRAGON_STYLES.black, jawOpenBlack, DRAGON_CONFIGS.black.limbPhase, boostRamp);
 
       const nightGlowMult = currentTimeMode === 'night' ? 1.58 : 1.0;
-      const xwMarks = drawXuanwu(XUANWU_CFG, simTime, nightGlowMult, boostRamp);
+      const xwMarks = drawXuanwu(XUANWU_CFG, simTime, nightGlowMult, boostRamp, waterCoverSmooth, XUANWU_CFG.summonBoost || 0);
       const phMarks = drawPhoenix(phPos, phFwd, phStancePitch, phRoll, phWingSpread, phWingFlap, phHeadYaw, phHeadPitch, phoenixJawOpen, phFlyIntensity, simTime, nightGlowMult, boostRamp);
 
       // 3-Dragon 5-Strand Elemental Aura Trails (125u+ Tail-Wake + Flanks) & Blazing Molten Lava Dripping Phoenix during Bức Tốc (H)
@@ -4668,11 +4907,14 @@
           pushBox(bx, by, bz, ID_Q, b.sx, b.sy, b.sz, cloudCol, 0, 5.0);
         }
       }
-      const seaCol = mix3(cloudCol, fogHorizon, 0.45);
-      for (const sc of seaClouds) {
-        const driftX = sc.x + Math.sin(simTime * sc.speed + sc.phase) * 3.8;
-        const driftZ = sc.z + Math.cos(simTime * sc.speed * 0.8 + sc.phase) * 3.2;
-        pushBox(driftX, sc.y + Math.sin(simTime * 0.5 + sc.phase) * 0.4, driftZ, ID_Q, sc.sx, sc.sy, sc.sz, seaCol, 0, 5.0);
+      const seaCloudVis = 1.0 - smoothstep(0.15, 0.72, waterCoverSmooth);
+      if (seaCloudVis > 0.02) {
+        const seaCol = mix3(cloudCol, fogHorizon, 0.45);
+        for (const sc of seaClouds) {
+          const driftX = sc.x + Math.sin(simTime * sc.speed + sc.phase) * 3.8;
+          const driftZ = sc.z + Math.cos(simTime * sc.speed * 0.8 + sc.phase) * 3.2;
+          pushBox(driftX, sc.y + Math.sin(simTime * 0.5 + sc.phase) * 0.4 - (1 - seaCloudVis) * 2.5, driftZ, ID_Q, sc.sx * seaCloudVis, sc.sy * seaCloudVis, sc.sz * seaCloudVis, seaCol, 0, 5.0);
+        }
       }
       for (const b of birds) {
         const ba = simTime * b.speed + b.offset, cx = b.cx + Math.cos(ba) * b.rad, cz = b.cz + Math.sin(ba) * b.rad, cy = b.y + Math.sin(simTime * 3.0 + b.offset) * 0.6;
@@ -4777,6 +5019,10 @@
         gl.uniform1i(u.uLightCount, lightCount);
         gl.uniform1i(u.uShadowMap, 0);
         gl.uniform1f(u.uUseShadow, useSh);
+        if (u.uSeaWater) gl.uniform1f(u.uSeaWater, waterCoverSmooth);
+        if (u.uWaterWaveR) gl.uniform1f(u.uWaterWaveR, waterWaveRadius);
+        if (u.uSeaSummonFlash) gl.uniform1f(u.uSeaSummonFlash, XUANWU_CFG.summonBoost || 0);
+        if (u.uXuanwuPos) gl.uniform2f(u.uXuanwuPos, xwMarks.baseP[0], xwMarks.baseP[2]);
       }
 
       gl.useProgram(instProg);
