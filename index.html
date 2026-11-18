@@ -2288,48 +2288,69 @@
     for (const [bx, by, bz] of [[-18, 18, 22], [18, 18, 22], [-26, 18, 42], [26, 18, 42], [-18, 77, 8], [18, 77, 8]]) {
       fillBox(bx, by, bz, bx, by + 3, bz, 3); setV(bx, by + 4, bz, 19);
     }
-    for (const [mx, my, mz] of [[64, 21, 42], [68, 20, 46], [60, 23, 38]]) {
-      setV(mx, my, mz, 25); setV(mx, my + 1, mz, 26);
+    function findGroundY(gx, gz, maxY = 72) {
+      for (let y = maxY; y >= -30; y--) {
+        const v = getV(gx, y, gz);
+        if (v !== 0 && (v < 13 || v > 17)) return y;
+      }
+      return -999;
+    }
+
+    for (const [mx, mz] of [[64, 42], [68, 46], [60, 38]]) {
+      const my = findGroundY(mx, mz, 45);
+      if (my > -90) {
+        fillBox(mx, my - 1, mz, mx, my + 1, mz, 25);
+        setV(mx, my + 2, mz, 26);
+      }
     }
 
     function buildTree(tx, ty, tz, isSakura, scale = 1) {
+      const gTop = findGroundY(tx, tz, 68);
+      const by = gTop > -90 ? gTop : ty;
+      function groundBarkCol(cx, topY, cz, maxDrop = 10) {
+        for (let y = topY; y >= by - maxDrop; y--) {
+          if (y <= by && getV(cx, y, cz) !== 0) break;
+          setV(cx, y, cz, 12);
+        }
+      }
       if (isSakura) {
         const h = 13;
-        for (let y = 0; y < h; y++) {
-          setV(tx, ty + y, tz, 12);
-          if (y < 6) setV(tx + 1, ty + y, tz, 12);
+        groundBarkCol(tx, by + h - 1, tz, 8);
+        groundBarkCol(tx + 1, by + 5, tz, 8);
+        for (const [rx, rz] of [[1, 0], [2, 0], [-1, 0], [0, 1], [0, 2], [0, -1], [0, -2]]) {
+          groundBarkCol(tx + rx, by + 2, tz + rz, 8);
         }
-        for (const [rx, rz] of [[2, 0], [-1, 0], [0, 2], [0, -2]]) fillBox(tx + Math.min(0, rx), ty + 1, tz + Math.min(0, rz), tx + Math.max(0, rx), ty + 2, tz + Math.max(0, rz), 12);
-        for (const [bx, by, bz] of [[2, 7, 0], [3, 8, 1], [-2, 8, 1], [-3, 9, 2], [0, 8, -2], [1, 9, -3]]) setV(tx + bx, ty + by, tz + bz, 12);
+        for (const [bx, oy, bz] of [[2, 7, 0], [3, 8, 1], [-2, 8, 1], [-3, 9, 2], [0, 8, -2], [1, 9, -3]]) setV(tx + bx, by + oy, tz + bz, 12);
         for (let dy = -3; dy <= 6; dy++) {
           const r = dy >= 5 ? 4 : 8;
           for (let dz = -r; dz <= r; dz++) {
             for (let dx = -r; dx <= r; dx++) {
               const distH = Math.hypot(dx, dz);
               if (distH > r + 0.45) continue;
-              const p = hash3(tx + Math.floor(dx / 2), ty + Math.floor(dy / 2), tz + Math.floor(dz / 2));
-              if (distH < r - 1.5 || p > 0.16) setV(tx + dx, ty + h + dy, tz + dz, p < 0.46 ? 13 : (p < 0.80 ? 14 : 15));
+              const p = hash3(tx + Math.floor(dx / 2), by + Math.floor(dy / 2), tz + Math.floor(dz / 2));
+              if (distH < r - 1.5 || p > 0.16) setV(tx + dx, by + h + dy, tz + dz, p < 0.46 ? 13 : (p < 0.80 ? 14 : 15));
             }
           }
         }
         for (let p = 0; p < 18; p++) {
           const px = tx + Math.round((hash3(tx, p, 7) - 0.5) * 14), pz = tz + Math.round((hash3(tz, p, 9) - 0.5) * 14);
-          if (getV(px, ty + 1, pz) === 0 && getV(px, ty, pz) > 0) setV(px, ty + 1, pz, 14);
+          const py = findGroundY(px, pz, by + 5);
+          if (py >= by - 6 && getV(px, py + 1, pz) === 0) setV(px, py + 1, pz, 14);
         }
       } else {
         const h = scale > 1 ? 28 : 20;
-        for (let y = 0; y < h; y++) {
-          setV(tx, ty + y, tz, 12);
-          if (scale > 1 && y < 10) setV(tx + 1, ty + y, tz, 12);
+        groundBarkCol(tx, by + h - 1, tz, 10);
+        if (scale > 1) groundBarkCol(tx + 1, by + 9, tz, 10);
+        for (const [rx, rz] of [[1, 0], [2, 0], [-1, 0], [0, 1], [0, 2], [0, -1], [0, -2]]) {
+          groundBarkCol(tx + rx, by + 1, tz + rz, 10);
         }
-        for (const [rx, rz] of [[2, 0], [-1, 0], [0, 2], [0, -2]]) setV(tx + rx, ty + 1, tz + rz, 12);
         for (let dy = 0; dy <= h + 3; dy++) {
           const r = Math.max(0, Math.round((1 - dy / (h + 4)) * (scale > 1 ? 9.6 : 6.8)));
           if (dy % 3 === 1 && r > 2) continue;
           for (let dz = -r; dz <= r; dz++) {
             for (let dx = -r; dx <= r; dx++) {
               if (Math.hypot(dx, dz) > r + 0.4) continue;
-              setV(tx + dx, ty + 6 + dy, tz + dz, ((Math.floor(dx / 2) + Math.floor(dz / 2) + Math.floor(dy / 2)) & 1) === 0 ? 16 : 17);
+              setV(tx + dx, by + 6 + dy, tz + dz, ((Math.floor(dx / 2) + Math.floor(dz / 2) + Math.floor(dy / 2)) & 1) === 0 ? 16 : 17);
             }
           }
         }
@@ -2337,11 +2358,11 @@
     }
 
     buildTree(22, 17, 29, true); buildTree(-24, 17, 30, false); buildTree(-38, 17, -28, true);
-    buildTree(-72, 48, -14, false, 2); buildTree(-78, 53, 22, false, 2); buildTree(-108, 46, -16, false, 2);
-    buildTree(-62, 36, 32, false, 1); buildTree(-110, 36, 18, false, 2);
-    buildTree(68, 22, 34, true); buildTree(92, 24, 26, true); buildTree(74, 25, -18, false, 2);
-    buildTree(96, 22, -6, false, 1); buildTree(62, 20, -34, false, 1);
-    buildTree(-98, 30, 94, false, 2); buildTree(-84, 24, 104, false, 1); buildTree(90, 28, 94, false, 2);
+    buildTree(-72, 40, -14, false, 2); buildTree(-78, 44, 22, false, 2); buildTree(-108, 48, -16, false, 2);
+    buildTree(-62, 21, 32, false, 1); buildTree(-110, 50, 18, false, 2);
+    buildTree(68, 12, 34, true); buildTree(90, 15, 29, true); buildTree(74, 16, -18, false, 2);
+    buildTree(96, 21, -6, false, 1); buildTree(62, 10, -34, false, 1);
+    buildTree(-98, 34, 94, false, 2); buildTree(-84, 19, 104, false, 1); buildTree(90, 31, 94, false, 2);
 
     // Growable Static Mesh Builder
     const FACES = [
@@ -2787,8 +2808,8 @@
 
     const SAKURA_TREES = [
       [22 * VS, 25 * VS, 29 * VS],
-      [68 * VS, 30 * VS, 34 * VS],
-      [92 * VS, 32 * VS, 26 * VS],
+      [68 * VS, 22 * VS, 34 * VS],
+      [90 * VS, 25 * VS, 29 * VS],
       [-38 * VS, 25 * VS, -28 * VS]
     ];
     const petals = [];
@@ -5952,10 +5973,10 @@
           pushBox(bxx, (52.0 - seg * 2.2) * VS, 17.0 * VS + sway, ID_Q, 0.76, 0.76, 0.14, seg === 3 ? [0.95, 0.74, 0.24] : [0.84, 0.16, 0.16], 0, 5.0);
         }
       }
-      for (const [fx, fy, fz] of [[-64, 36, 32], [-84, 58, 16]]) {
-        pushBox(fx * VS, (fy + 2) * VS, fz * VS, ID_Q, 0.18, 2.8, 0.18, [0.35, 0.22, 0.14], 0, 4.0);
+      for (const [fx, fy, fz] of [[-64, 26.5, 32], [-84, 59.5, 16]]) {
+        pushBox(fx * VS, fy * VS, fz * VS, ID_Q, 0.18, 2.8, 0.18, [0.35, 0.22, 0.14], 0, 4.0);
         const sway = Math.sin(simTime * 4.2 + fx) * 0.18;
-        pushBox(fx * VS + 0.45, (fy + 3) * VS, fz * VS + sway, ID_Q, 0.72, 1.05, 0.14, [0.86, 0.16, 0.16], 0, 5.0);
+        pushBox(fx * VS + 0.45, (fy + 1.0) * VS, fz * VS + sway, ID_Q, 0.72, 1.05, 0.14, [0.86, 0.16, 0.16], 0, 5.0);
       }
       for (let i = 0; i < BRAZIERS.length; i++) {
         const [tx, ty, tz] = BRAZIERS[i];
