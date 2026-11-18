@@ -90,17 +90,24 @@
     <div id="stage" class="relative w-full rounded-xl overflow-hidden border border-[var(--card-border)] bg-[var(--card)]">
       <canvas id="glcanvas" class="block w-full h-full cursor-grab active:cursor-grabbing"></canvas>
 
-      <div class="pointer-events-none absolute top-2 left-2 max-w-[calc(100%-92px)] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 text-white/95 text-xs border border-white/15 truncate">
+      <div id="hud-top-badge" class="pointer-events-none absolute top-2 left-2 max-w-[calc(100%-154px)] sm:max-w-[calc(100%-190px)] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 text-white/95 text-xs border border-white/15 truncate transition-opacity duration-200">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
         <span class="font-medium shrink-0">Cổ Thành &amp; Tứ Linh</span>
         <span id="voxel-badge" class="text-white/80 font-mono text-[11px] pl-1 border-l border-white/20 truncate">Đang dựng khối...</span>
       </div>
 
-      <button id="btn-fs" title="Toàn màn hình" class="absolute top-2 right-2 px-2.5 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
-        Phóng to
-      </button>
+      <div id="hud-tap-pill" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-11 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-950/85 text-white/95 text-[11px] border border-white/20 z-10 whitespace-nowrap"></div>
 
-      <div class="absolute bottom-2 left-2 max-w-[calc(100%-16px)] flex flex-wrap items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 text-white/90 text-[10px] sm:text-[11px] border border-white/15">
+      <div class="absolute top-2 right-2 flex items-center gap-1 z-10">
+        <button id="btn-hud" title="Ẩn/Hiện giao diện (U)" class="px-2 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
+          Ẩn UI
+        </button>
+        <button id="btn-fs" title="Toàn màn hình" class="px-2.5 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
+          Phóng to
+        </button>
+      </div>
+
+      <div id="hud-follow-bar" class="absolute bottom-2 left-2 max-w-[calc(100%-16px)] flex flex-wrap items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 text-white/90 text-[10px] sm:text-[11px] border border-white/15 transition-opacity duration-200">
         <span class="text-white/70">Theo:</span>
         <button data-follow="green" class="follow-btn px-1.5 rounded font-medium bg-emerald-600 text-white transition">Thanh Long</button>
         <button data-follow="white" class="follow-btn px-1.5 rounded font-medium text-cyan-200 hover:bg-white/15 transition">Bạch Long</button>
@@ -109,12 +116,12 @@
         <button data-follow="xuanwu" class="follow-btn px-1.5 rounded font-medium text-teal-300 hover:bg-white/15 transition">Huyền Vũ</button>
       </div>
 
-      <div class="hidden md:block pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15">
-        F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc · X Huyền Vũ
+      <div id="hud-keys-hint" class="hidden md:block pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15 transition-opacity duration-200">
+        F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc · X Huyền Vũ · U Ẩn UI
       </div>
     </div>
 
-    <div class="space-y-1 text-[11px] px-0.5 shrink-0">
+    <div id="controls-wrap" class="space-y-1 text-[11px] px-0.5 shrink-0">
       <div class="ctrl-strip flex flex-wrap items-center justify-between gap-1">
         <div class="flex items-center gap-1 flex-wrap">
           <span class="text-[var(--muted-foreground)]">Sáng:</span>
@@ -135,6 +142,7 @@
           <span class="text-[var(--muted-foreground)]">Góc:</span>
           <button data-cam="render" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)] font-medium">Chuẩn</button>
           <button data-cam="overview" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Quay 360°</button>
+          <button data-cam="courtyard" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Sân Thành</button>
           <button data-cam="dragon" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Theo Rồng</button>
           <button data-cam="waterfall" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Thác Nước</button>
           <button data-cam="pagoda" class="cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]">Cổ Tháp</button>
@@ -2778,17 +2786,55 @@
     }
 
     const lanterns = [];
-    for (let i = 0; i < 36; i++) {
-      const ang = hash3(i, 21, 22) * Math.PI * 2, rad = 11 + hash3(i, 23, 24) * 26;
+    for (let i = 0; i < 40; i++) {
+      const ang = hash3(i, 21, 22) * Math.PI * 2, rad = 9 + hash3(i, 23, 24) * 32;
       lanterns.push({
-        x: Math.cos(ang) * rad + (i > 28 ? 20 : 0), y: 8 + hash3(i, 25, 26) * 36, z: Math.sin(ang) * rad,
-        speed: 0.65 + hash3(i, 27, 28) * 0.65, phase: hash3(i, 29, 30) * 6.28
+        x: Math.cos(ang) * rad + (i % 5 === 0 ? 12 : 0),
+        y: 6 + hash3(i, 25, 26) * 44,
+        z: Math.sin(ang) * rad + 2,
+        speed: 0.72 + hash3(i, 27, 28) * 0.65,
+        phase: hash3(i, 29, 30) * 6.28
       });
     }
 
+    const SAKURA_TREES = [
+      [22 * VS, 25 * VS, 29 * VS],
+      [68 * VS, 30 * VS, 34 * VS],
+      [92 * VS, 32 * VS, 26 * VS],
+      [-38 * VS, 25 * VS, -28 * VS]
+    ];
     const petals = [];
-    for (let i = 0; i < 36; i++) {
-      petals.push({ x: (hash3(i, 31, 32) - 0.5) * 44, y: 7 + hash3(i, 33, 34) * 16, z: (hash3(i, 35, 36) - 0.5) * 40, phase: hash3(i, 37, 38) * 6.28 });
+    for (let i = 0; i < 64; i++) {
+      const tr = SAKURA_TREES[i % SAKURA_TREES.length];
+      const ang = hash3(i, 31, 32) * Math.PI * 2, r = 0.8 + hash3(i, 33, 34) * 3.8;
+      petals.push({
+        bx: tr[0] + Math.cos(ang) * r,
+        by: tr[1] + 2.8,
+        bz: tr[2] + Math.sin(ang) * r,
+        drop: 5.5 + hash3(i, 35, 36) * 3.5,
+        speed: 0.85 + hash3(i, 39, 40) * 0.65,
+        phase: hash3(i, 37, 38) * 6.28
+      });
+    }
+
+    const FIREFLY_ANCHORS = [
+      [10 * VS, 19.5 * VS, 28 * VS],
+      [-15 * VS, 19.5 * VS, 30 * VS],
+      [-24 * VS, 20.5 * VS, 30 * VS],
+      [78 * VS, 27.5 * VS, 14 * VS],
+      [84 * VS, 26.5 * VS, -64 * VS],
+      [-80 * VS, 62.5 * VS, 2 * VS]
+    ];
+    const fireflies = [];
+    for (let i = 0; i < 54; i++) {
+      const anc = FIREFLY_ANCHORS[i % FIREFLY_ANCHORS.length];
+      fireflies.push({
+        ax: anc[0] + (hash3(i, 51, 1) - 0.5) * 7.5,
+        ay: anc[1] + hash3(i, 52, 2) * 3.4,
+        az: anc[2] + (hash3(i, 53, 3) - 0.5) * 7.5,
+        rate: hash3(i, 54, 4) * 1.4,
+        phase: hash3(i, 55, 5) * 6.28
+      });
     }
 
     const weatherParticles = [];
@@ -3323,7 +3369,7 @@
 
     let currentTimeMode = location.hash.includes('night') ? 'night' : (location.hash.includes('day') ? 'day' : 'sunset');
     let currentWeather = location.hash.includes('storm') ? 'storm' : ((!location.hash.includes('snowbreath') && location.hash.includes('snow')) ? 'snow' : (location.hash.includes('fog') ? 'fog' : 'clear'));
-    let currentCamMode = location.hash.includes('cam=dragon') ? 'dragon' : 'render';
+    let currentCamMode = location.hash.includes('cam=dragon') ? 'dragon' : (location.hash.includes('cam=courtyard') ? 'courtyard' : 'render');
     let followDragonKey = location.hash.includes('follow=white') ? 'white' : (location.hash.includes('follow=black') ? 'black' : (location.hash.includes('follow=phoenix') ? 'phoenix' : (location.hash.includes('follow=xuanwu') ? 'xuanwu' : 'green')));
     let playing = true;
     let simTime = location.hash.includes('t=') ? (parseFloat(location.hash.split('t=')[1]) || 0) : 0;
@@ -3335,7 +3381,7 @@
     let snowCoverSmooth = currentWeather === 'snow' ? 1.0 : 0.0;
     let fogDensSmooth = currentWeather === 'fog' ? 2.35 : (currentWeather === 'clear' ? 1.0 : 1.45);
 
-    // ---------- Camera & Controls ----------
+    // ---------- Camera, Direct Spirit Pick & HUD Toggle ----------
     const isPortraitView = window.innerHeight > window.innerWidth * 1.05;
     const cam = {
       yaw: isPortraitView ? 0.50 : 0.46,
@@ -3344,8 +3390,55 @@
       target: isPortraitView ? [6, 9, -2] : [0, 14, 2],
       dragging: false, panning: false, lastX: 0, lastY: 0
     };
+    const SPIRIT_LABELS = { green: 'Thanh Long', white: 'Bạch Long', black: 'Hắc Long', phoenix: 'Phượng Hoàng', xuanwu: 'Huyền Vũ' };
+    let lastCamVP = null, lastProjM5 = 2.6, lastTapTimer = 0;
+    const spiritPickAnchors = [];
+
+    function applyCamPreset(mode) {
+      const camAsp = (canvas.clientWidth || window.innerWidth) / Math.max(canvas.clientHeight || window.innerHeight, 1);
+      const isPort = camAsp < 1.0;
+      if (mode === 'render') { cam.yaw = isPort ? 0.50 : 0.46; cam.pitch = isPort ? 0.27 : 0.24; cam.dist = isPort ? 174 : (window.innerWidth < 768 ? 124 : 104); cam.target = isPort ? [6, 9, -2] : [0, 14, 2]; }
+      else if (mode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = Math.round(108 * (isPort ? 1.62 : 1.0)); cam.target = isPort ? [4, 10, -1] : [2, 13, 0]; }
+      else if (mode === 'courtyard') { cam.yaw = 0.24; cam.pitch = 0.24; cam.dist = isPort ? 34 : 23; cam.target = [0.0, 6.8, 10.5]; }
+      else if (mode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = Math.round(52 * (isPort ? 1.48 : 1.0)); cam.target = [-6, 4, 20]; }
+      else if (mode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = Math.round(70 * (isPort ? 1.46 : 1.0)); cam.target = [24, 15, -10]; }
+    }
+    if (currentCamMode !== 'render' && currentCamMode !== 'dragon') applyCamPreset(currentCamMode);
+
+    function pickSpiritAt(clientX, clientY) {
+      if (!lastCamVP || spiritPickAnchors.length === 0) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) return null;
+      const vp = lastCamVP, halfH = rect.height * 0.5 * lastProjM5;
+      let bestKey = null, bestW = Infinity;
+      for (let i = 0; i < spiritPickAnchors.length; i++) {
+        const [k, x, y, z, worldR] = spiritPickAnchors[i];
+        const cw = vp[3] * x + vp[7] * y + vp[11] * z + vp[15];
+        if (cw <= 0.8) continue;
+        const cx = (vp[0] * x + vp[4] * y + vp[8] * z + vp[12]) / cw;
+        const cy = (vp[1] * x + vp[5] * y + vp[9] * z + vp[13]) / cw;
+        const sx = rect.left + (cx * 0.5 + 0.5) * rect.width;
+        const sy = rect.top + (0.5 - cy * 0.5) * rect.height;
+        const hitPx = Math.max((worldR / cw) * halfH + 14, 30);
+        if (Math.hypot(clientX - sx, clientY - sy) <= hitPx && cw < bestW) {
+          bestW = cw;
+          bestKey = k;
+        }
+      }
+      return bestKey;
+    }
+
+    function showTapFlash(key) {
+      const pill = document.getElementById('hud-tap-pill');
+      if (!pill) return;
+      pill.textContent = `Đang theo: ${SPIRIT_LABELS[key] || key}`;
+      pill.classList.remove('opacity-0');
+      clearTimeout(lastTapTimer);
+      lastTapTimer = setTimeout(() => pill.classList.add('opacity-0'), 1800);
+    }
+
     const activePtrs = new Map();
-    let lastPinchDist = null;
+    let lastPinchDist = null, ptrTap = null;
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
@@ -3354,15 +3447,20 @@
       if (activePtrs.size === 1) {
         cam.dragging = true; cam.panning = (e.button === 2 || e.shiftKey);
         cam.lastX = e.clientX; cam.lastY = e.clientY;
+        ptrTap = { id: e.pointerId, x: e.clientX, y: e.clientY, dist: 0, button: e.button };
         lastPinchDist = null;
       } else if (activePtrs.size === 2) {
         const pts = [...activePtrs.values()];
         lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         cam.dragging = false;
+        ptrTap = null;
       }
     });
     canvas.addEventListener('pointermove', e => {
       if (activePtrs.has(e.pointerId)) activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrTap && e.pointerId === ptrTap.id) {
+        ptrTap.dist = Math.max(ptrTap.dist, Math.hypot(e.clientX - ptrTap.x, e.clientY - ptrTap.y));
+      }
       if (activePtrs.size === 2) {
         const pts = [...activePtrs.values()];
         const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -3372,7 +3470,10 @@
         lastPinchDist = d;
         return;
       }
-      if (!cam.dragging) return;
+      if (!cam.dragging) {
+        if (e.pointerType === 'mouse') canvas.style.cursor = pickSpiritAt(e.clientX, e.clientY) ? 'pointer' : '';
+        return;
+      }
       const dx = e.clientX - cam.lastX, dy = e.clientY - cam.lastY;
       cam.lastX = e.clientX; cam.lastY = e.clientY;
       if (cam.panning) {
@@ -3386,6 +3487,8 @@
       }
     });
     function releasePtr(e) {
+      const isTap = (e.type === 'pointerup' && ptrTap && e.pointerId === ptrTap.id && ptrTap.button === 0 && ptrTap.dist < 7);
+      if (ptrTap && e.pointerId === ptrTap.id) ptrTap = null;
       activePtrs.delete(e.pointerId);
       if (activePtrs.size < 2) lastPinchDist = null;
       if (activePtrs.size === 1) {
@@ -3393,6 +3496,17 @@
         cam.dragging = true; cam.lastX = p.x; cam.lastY = p.y;
       } else if (activePtrs.size === 0) {
         cam.dragging = false;
+      }
+      if (isTap) {
+        const hitKey = pickSpiritAt(e.clientX, e.clientY);
+        if (hitKey) {
+          followDragonKey = hitKey;
+          currentCamMode = 'dragon';
+          followSmoothInit = false;
+          syncCamButtons();
+          syncFollowButtons();
+          showTapFlash(hitKey);
+        }
       }
     }
     canvas.addEventListener('pointerup', releasePtr);
@@ -3452,14 +3566,34 @@
 
     document.querySelectorAll('.cam-btn').forEach(btn => btn.addEventListener('click', () => {
       currentCamMode = btn.dataset.cam;
-      const camAsp = (canvas.clientWidth || window.innerWidth) / Math.max(canvas.clientHeight || window.innerHeight, 1);
-      const isPort = camAsp < 1.0;
-      if (currentCamMode === 'render') { cam.yaw = isPort ? 0.50 : 0.46; cam.pitch = isPort ? 0.27 : 0.24; cam.dist = isPort ? 174 : (window.innerWidth < 768 ? 124 : 104); cam.target = isPort ? [6, 9, -2] : [0, 14, 2]; }
-      else if (currentCamMode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = Math.round(108 * (isPort ? 1.62 : 1.0)); cam.target = isPort ? [4, 10, -1] : [2, 13, 0]; }
-      else if (currentCamMode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = Math.round(52 * (isPort ? 1.48 : 1.0)); cam.target = [-6, 4, 20]; }
-      else if (currentCamMode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = Math.round(70 * (isPort ? 1.46 : 1.0)); cam.target = [24, 15, -10]; }
+      if (currentCamMode !== 'dragon') applyCamPreset(currentCamMode);
       syncCamButtons(); syncFollowButtons();
     }));
+
+    const btnHud = document.getElementById('btn-hud');
+    let hudHidden = location.hash.includes('hud=off');
+    function setHudHidden(next) {
+      hudHidden = !!next;
+      const ctrl = document.getElementById('controls-wrap');
+      if (ctrl) ctrl.classList.toggle('hidden', hudHidden);
+      for (const id of ['hud-top-badge', 'hud-follow-bar', 'hud-keys-hint']) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.toggle('opacity-0', hudHidden);
+          el.classList.toggle('pointer-events-none', hudHidden);
+        }
+      }
+      if (btnHud) {
+        btnHud.textContent = hudHidden ? 'Hiện UI' : 'Ẩn UI';
+        btnHud.className = hudHidden
+          ? 'px-2 py-1 rounded-md bg-slate-950/35 hover:bg-slate-950/85 text-white/75 text-[11px] border border-white/15 transition'
+          : 'px-2 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition';
+      }
+      requestAnimationFrame(resize);
+    }
+    if (btnHud) btnHud.addEventListener('click', () => setHudHidden(!hudHidden));
+    window.addEventListener('keydown', e => { if ((e.key === 'u' || e.key === 'U') && !e.repeat) setHudHidden(!hudHidden); });
+    if (hudHidden) setHudHidden(true);
 
     const togglePlayBtn = document.getElementById('toggle-play');
     togglePlayBtn.addEventListener('click', () => { playing = !playing; togglePlayBtn.textContent = playing ? 'Tạm dừng' : 'Tiếp tục'; });
@@ -3484,14 +3618,8 @@
       const nowPort = ch > cw * 1.05;
       if (nowPort !== lastPortOrient) {
         lastPortOrient = nowPort;
-        if (currentCamMode === 'render') {
-          cam.yaw = nowPort ? 0.50 : 0.46;
-          cam.pitch = nowPort ? 0.27 : 0.24;
-          cam.dist = nowPort ? 174 : (window.innerWidth < 768 ? 124 : 104);
-          cam.target = nowPort ? [6, 9, -2] : [0, 14, 2];
-        } else if (currentCamMode === 'overview') {
-          cam.dist = Math.round(108 * (nowPort ? 1.62 : 1.0));
-          cam.target = nowPort ? [4, 10, -1] : [2, 13, 0];
+        if (currentCamMode === 'render' || currentCamMode === 'overview' || currentCamMode === 'courtyard') {
+          applyCamPreset(currentCamMode);
         }
       }
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -4570,32 +4698,43 @@
       return { shellC, baseP, fwd, right, up, serpentHead: shEnd };
     }
 
-    const CASTLE_GUARDS = [
-      { id: 'Gate_L', vx: -5, vy: 17, vz: 59, yaw: 0.08, rank: 'captain', leftItem: 'lantern', phase: 0.2 },
-      { id: 'Gate_R', vx: 5, vy: 17, vz: 59, yaw: -0.08, rank: 'captain', leftItem: 'lantern', phase: 1.4 },
-      { id: 'Keep_L', vx: -7, vy: 17, vz: 18, yaw: 0.06, rank: 'captain', leftItem: 'lantern', phase: 2.1 },
-      { id: 'Keep_R', vx: 7, vy: 17, vz: 18, yaw: -0.06, rank: 'captain', leftItem: 'lantern', phase: 3.3 },
-      { id: 'Bridge_Patrol', vx: -4, vy: 17, vz: 24, z1: 43, speed: 1.50, rank: 'guard', leftItem: 'shield', phase: 0.8 },
-      { id: 'Courtyard_Patrol', vx: -15, vy: 17, vz: 22, z1: 40, speed: 1.32, rank: 'guard', leftItem: 'none', phase: 4.5 },
-      { id: 'Pier_Patrol', vx: -3, vy: 17, vz: 63, z1: 72, speed: 1.18, rank: 'guard', leftItem: 'lantern', phase: 2.7 },
-      { id: 'KeepTerr_L', vx: -24, vy: 56, vz: 4, yaw: -0.38, rank: 'guard', leftItem: 'shield', phase: 1.9 },
-      { id: 'KeepTerr_R', vx: 24, vy: 56, vz: 4, yaw: 0.38, rank: 'guard', leftItem: 'shield', phase: 3.8 },
-      { id: 'WestWall_S', vx: -52, vy: 40, vz: 16, yaw: -Math.PI * 0.5, rank: 'guard', leftItem: 'shield', phase: 0.5 },
-      { id: 'WestWall_N', vx: -52, vy: 40, vz: -16, yaw: -Math.PI * 0.5, rank: 'guard', leftItem: 'lantern', phase: 2.9 },
-      { id: 'EastWall_N', vx: 52, vy: 40, vz: -16, yaw: Math.PI * 0.5, rank: 'guard', leftItem: 'shield', phase: 4.1 },
-      { id: 'SouthWall_W', vx: -28, vy: 40, vz: 52, yaw: 0.0, rank: 'guard', leftItem: 'shield', phase: 1.1 },
-      { id: 'SouthWall_E', vx: 28, vy: 40, vz: 52, yaw: 0.0, rank: 'guard', leftItem: 'lantern', phase: 5.0 },
-      { id: 'SE_Tower', vx: 52, vy: 40, vz: 52, yaw: 0.78, rank: 'captain', leftItem: 'shield', phase: 2.4 },
-      { id: 'Pagoda_Sentry', vx: 84, vy: 24, vz: -64, yaw: 0.0, rank: 'guard', leftItem: 'lantern', phase: 3.6 }
+    const CASTLE_PEOPLE = [
+      { id: 'Gate_L', vx: -5, vy: 17, vz: 59, yaw: 0.08, role: 'captain', leftItem: 'lantern', phase: 0.2 },
+      { id: 'Gate_R', vx: 5, vy: 17, vz: 59, yaw: -0.08, role: 'captain', leftItem: 'lantern', phase: 1.4 },
+      { id: 'Keep_L', vx: -7, vy: 17, vz: 18, yaw: 0.06, role: 'captain', leftItem: 'lantern', phase: 2.1 },
+      { id: 'Keep_R', vx: 7, vy: 17, vz: 18, yaw: -0.06, role: 'captain', leftItem: 'lantern', phase: 3.3 },
+      { id: 'Bridge_Patrol', vx: -4, vy: 17, vz: 24, z1: 43, speed: 1.50, role: 'guard', leftItem: 'shield', phase: 0.8 },
+      { id: 'Courtyard_Patrol', vx: -15, vy: 17, vz: 22, z1: 40, speed: 1.32, role: 'guard', leftItem: 'none', phase: 4.5 },
+      { id: 'Pier_Patrol', vx: -3, vy: 17, vz: 63, z1: 72, speed: 1.18, role: 'guard', leftItem: 'lantern', phase: 2.7 },
+      { id: 'KeepTerr_L', vx: -24, vy: 56, vz: 4, yaw: -0.38, role: 'guard', leftItem: 'shield', phase: 1.9 },
+      { id: 'KeepTerr_R', vx: 24, vy: 56, vz: 4, yaw: 0.38, role: 'guard', leftItem: 'shield', phase: 3.8 },
+      { id: 'WestWall_S', vx: -52, vy: 40, vz: 16, yaw: -Math.PI * 0.5, role: 'guard', leftItem: 'shield', phase: 0.5 },
+      { id: 'WestWall_N', vx: -52, vy: 40, vz: -16, yaw: -Math.PI * 0.5, role: 'guard', leftItem: 'lantern', phase: 2.9 },
+      { id: 'EastWall_N', vx: 52, vy: 40, vz: -16, yaw: Math.PI * 0.5, role: 'guard', leftItem: 'shield', phase: 4.1 },
+      { id: 'SouthWall_W', vx: -28, vy: 40, vz: 52, yaw: 0.0, role: 'guard', leftItem: 'shield', phase: 1.1 },
+      { id: 'SouthWall_E', vx: 28, vy: 40, vz: 52, yaw: 0.0, role: 'guard', leftItem: 'lantern', phase: 5.0 },
+      { id: 'SE_Tower', vx: 52, vy: 40, vz: 52, yaw: 0.78, role: 'captain', leftItem: 'shield', phase: 2.4 },
+      { id: 'Pagoda_Sentry', vx: 84, vy: 24, vz: -64, yaw: 0.0, role: 'guard', leftItem: 'lantern', phase: 3.6 },
+      { id: 'NorthWall_ArcherW', vx: -22, vy: 40, vz: -52, yaw: Math.PI, role: 'archer', leftItem: 'bow', phase: 0.9 },
+      { id: 'NorthWall_ArcherE', vx: 22, vy: 40, vz: -52, yaw: Math.PI, role: 'archer', leftItem: 'bow', phase: 3.1 },
+      { id: 'EastWall_ArcherS', vx: 52, vy: 40, vz: 22, yaw: Math.PI * 0.5, role: 'archer', leftItem: 'bow', phase: 4.7 },
+      { id: 'WestShrine_Monk', vx: -82, vy: 60, vz: 2, yaw: Math.PI * 0.45, role: 'monk', leftItem: 'beads', phase: 1.5 },
+      { id: 'EastGarden_Monk', vx: 82, vy: 27, vz: 20, yaw: -2.15, role: 'monk', leftItem: 'lantern', phase: 4.2 },
+      { id: 'Pond_Scholar', vx: 10, vy: 17, vz: 28, yaw: -Math.PI * 0.46, role: 'scholar', leftItem: 'fan', phase: 2.2 },
+      { id: 'EastBailey_Stroller', vx: 13, vy: 17, vz: 23, z1: 38, speed: 0.92, role: 'scholar', leftItem: 'lantern', phase: 5.4 }
     ];
 
-    function drawGuards(time, nightGlowMult) {
+    function drawCastleLife(time, nightGlowMult, boatState, reactState) {
       const UP = [0, 1, 0];
       const nightMix = clamp((nightGlowMult - 1.0) / 0.58, 0.0, 1.0);
+      const reactAmt = reactState ? clamp(reactState.salute || 0, 0, 1) : 0;
+      const reactPt = reactState ? reactState.focusPos : null;
+
       const cSkin = [0.92, 0.76, 0.63];
       const cVisor = [0.14, 0.16, 0.21];
       const cSteel = [0.22, 0.27, 0.35];
       const cArmor = [0.18, 0.24, 0.34];
+      const cRanger = [0.16, 0.31, 0.24];
       const cCrimson = [0.76, 0.14, 0.15];
       const cCapTrim = [0.94, 0.73, 0.22];
       const cBronze = [0.76, 0.58, 0.22];
@@ -4604,6 +4743,12 @@
       const cBlade = [0.80, 0.85, 0.92];
       const cTassel = [0.92, 0.16, 0.16];
       const cLantern = [1.0, 0.74, 0.28];
+      const cMonkRobe = [0.84, 0.88, 0.90];
+      const cMonkTeal = [0.16, 0.48, 0.54];
+      const cStraw = [0.82, 0.70, 0.40];
+      const cJadeRobe = [0.18, 0.45, 0.38];
+      const cPlumRobe = [0.46, 0.22, 0.48];
+      const cNavyTunic = [0.15, 0.26, 0.42];
 
       function pitchBasis(r0, u0, f0, ang) {
         const ca = Math.cos(ang), sa = Math.sin(ang);
@@ -4613,59 +4758,23 @@
         };
       }
 
-      for (let gi = 0; gi < CASTLE_GUARDS.length; gi++) {
-        const g = CASTLE_GUARDS[gi];
-        let wx = g.vx * VS;
-        const footY = (g.vy + 0.5) * VS;
-        let wz = g.vz * VS;
-        let yaw = g.yaw || 0.0;
-        let walkWeight = 0.0;
+      function renderPerson(wx, footY, wz, yaw, role, leftItem, phase, walkWeight, stridePhase, scBase = 1.0) {
+        const isCap = role === 'captain';
+        const isGuard = isCap || role === 'guard';
+        const isArcher = role === 'archer';
+        const isMonk = role === 'monk';
+        const isScholar = role === 'scholar';
+        const isBoatman = role === 'boatman';
+        const sc = isCap ? 1.06 * scBase : scBase;
 
-        if (g.z1 !== undefined) {
-          const zA = g.vz * VS, zB = g.z1 * VS;
-          const dist = Math.abs(zB - zA);
-          const walkDur = dist / (g.speed || 1.35);
-          const pauseDur = 1.05;
-          const halfT = walkDur + pauseDur;
-          const fullT = halfT * 2.0;
-          const cyc = ((time + g.phase * 1.9) % fullT + fullT) % fullT;
-          const yawForward = zB > zA ? 0.0 : Math.PI;
-          const yawBack = yawForward + Math.PI;
-
-          if (cyc < walkDur) {
-            const p = cyc / walkDur;
-            wz = mix(zA, zB, p);
-            yaw = yawForward;
-            walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p));
-          } else if (cyc < halfT) {
-            wz = zB;
-            const tp = smoothstep(0.18, 0.86, (cyc - walkDur) / pauseDur);
-            yaw = yawForward + Math.PI * tp;
-            walkWeight = 0.0;
-          } else if (cyc < halfT + walkDur) {
-            const p = (cyc - halfT) / walkDur;
-            wz = mix(zB, zA, p);
-            yaw = yawBack;
-            walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p));
-          } else {
-            wz = zA;
-            const tp = smoothstep(0.18, 0.86, (cyc - halfT - walkDur) / pauseDur);
-            yaw = yawBack + Math.PI * tp;
-            walkWeight = 0.0;
-          }
-        }
-
-        const isCap = g.rank === 'captain';
-        const sc = isCap ? 1.06 : 1.00;
-        const cBody = isCap ? cCrimson : cArmor;
-        const cCrest = isCap ? cCapTrim : cBronze;
+        const cBody = isCap ? cCrimson : (isArcher ? cRanger : (isMonk ? cMonkRobe : (isBoatman ? cNavyTunic : (isScholar ? (phase > 3.0 ? cPlumRobe : cJadeRobe) : cArmor))));
+        const cCrest = isCap ? cCapTrim : (isMonk ? cMonkTeal : cBronze);
 
         const bFwd = [Math.sin(yaw), 0.0, Math.cos(yaw)];
         const bRight = [Math.cos(yaw), 0.0, -Math.sin(yaw)];
         const bodyQ = quatFromFrame(bRight, UP, bFwd);
 
-        const stridePhase = time * 6.2 + g.phase * 3.1;
-        const bob = walkWeight * Math.abs(Math.sin(stridePhase)) * 0.055 * sc + (1.0 - walkWeight) * Math.sin(time * 2.1 + g.phase) * 0.012;
+        const bob = walkWeight * Math.abs(Math.sin(stridePhase)) * 0.055 * sc + (1.0 - walkWeight) * Math.sin(time * 2.1 + phase) * 0.012 * sc;
         const legSwingAmp = walkWeight * 0.56;
         const armSwingAmp = walkWeight * 0.42;
 
@@ -4681,7 +4790,7 @@
           );
         }
 
-        // Articulated Legs (Hip y = 0.88 -> Knee -> Boot resting flush at footY)
+        // Articulated Legs
         const hipY = footY + bob + 0.88 * sc;
         for (const s of [-1, 1]) {
           const swing = s * Math.sin(stridePhase) * legSwingAmp;
@@ -4689,15 +4798,15 @@
           const hipX = wx + bRight[0] * (s * 0.145 * sc);
           const hipZ = wz + bRight[2] * (s * 0.145 * sc);
           const thighLen = 0.41 * sc;
-          gBox(hipX - thighB.u[0] * thighLen * 0.5, hipY - thighB.u[1] * thighLen * 0.5, hipZ - thighB.u[2] * thighLen * 0.5, bRight, thighB.u, thighB.f, 0.21, 0.41, 0.23, cBody, 0, 5.0);
+          gBox(hipX - thighB.u[0] * thighLen * 0.5, hipY - thighB.u[1] * thighLen * 0.5, hipZ - thighB.u[2] * thighLen * 0.5, bRight, thighB.u, thighB.f, 0.21, 0.41, 0.23, isMonk || isScholar ? cBody : cBody, 0, 5.0);
           const kneeBend = walkWeight * Math.max(0.0, -swing * 0.65);
           const shinB = pitchBasis(bRight, UP, bFwd, swing - kneeBend);
           const kneeX = hipX - thighB.u[0] * thighLen;
           const kneeY = hipY - thighB.u[1] * thighLen;
           const kneeZ = hipZ - thighB.u[2] * thighLen;
           const shinLen = 0.35 * sc;
-          gBox(kneeX - shinB.u[0] * shinLen * 0.5, kneeY - shinB.u[1] * shinLen * 0.5, kneeZ - shinB.u[2] * shinLen * 0.5, bRight, shinB.u, shinB.f, 0.18, 0.36, 0.20, cSteel, 0, 5.0);
-          gBox(kneeX + shinB.f[0] * 0.04 * sc, kneeY + shinB.f[1] * 0.04 * sc, kneeZ + shinB.f[2] * 0.04 * sc, bRight, shinB.u, shinB.f, 0.19, 0.11, 0.12, cCrest, 0, 5.0);
+          gBox(kneeX - shinB.u[0] * shinLen * 0.5, kneeY - shinB.u[1] * shinLen * 0.5, kneeZ - shinB.u[2] * shinLen * 0.5, bRight, shinB.u, shinB.f, 0.18, 0.36, 0.20, isMonk || isScholar || isBoatman ? cVisor : cSteel, 0, 5.0);
+          if (isGuard || isArcher) gBox(kneeX + shinB.f[0] * 0.04 * sc, kneeY + shinB.f[1] * 0.04 * sc, kneeZ + shinB.f[2] * 0.04 * sc, bRight, shinB.u, shinB.f, 0.19, 0.11, 0.12, cCrest, 0, 5.0);
           const ankleX = kneeX - shinB.u[0] * shinLen;
           const ankleY = kneeY - shinB.u[1] * shinLen;
           const ankleZ = kneeZ - shinB.u[2] * shinLen;
@@ -4705,84 +4814,192 @@
           gBox(ankleX + shinB.f[0] * 0.045 * sc, bootOffY, ankleZ + shinB.f[2] * 0.045 * sc, bRight, UP, bFwd, 0.20, 0.13, 0.31, cBoot, 0, 5.0);
         }
 
-        // Lamellar Waist Tasset Skirt, Belt, Chest Cuirass & Pauldrons
-        bBox(0.0, 0.0, 0.77, 0.56, 0.22, 0.34, cArmor, 0, 5.0);
-        bBox(0.0, 0.0, 0.92, 0.52, 0.13, 0.33, cCrimson, 0, 5.0);
-        bBox(0.17, 0.0, 0.92, 0.18, 0.12, 0.05, cCrest, 0.05, 5.0);
-        bBox(0.0, 0.0, 1.24, 0.50, 0.56, 0.30, cBody, 0, 5.0);
-        bBox(0.03, 0.0, 1.28, 0.34, 0.36, 0.31, cCrest, 0.04, 5.0);
-        for (const s of [-1, 1]) {
-          bBox(0.0, s * 0.34, 1.46, 0.22, 0.22, 0.30, cCrimson, 0, 5.0);
-          bBox(0.0, s * 0.35, 1.56, 0.24, 0.07, 0.32, cCrest, 0.04, 5.0);
+        // Torso & Role Silhouette (War Armor / Flowing Robes)
+        if (isMonk || isScholar) {
+          bBox(0.0, 0.0, 0.72, 0.52, 0.42, 0.33, cBody, 0, 5.0);
+          bBox(0.0, 0.0, 0.96, 0.50, 0.12, 0.34, isMonk ? cMonkTeal : cCapTrim, 0, 5.0);
+          bBox(0.0, 0.0, 1.24, 0.48, 0.54, 0.30, cBody, 0, 5.0);
+          bBox(0.02, 0.0, 1.26, 0.22, 0.42, 0.31, isMonk ? cMonkTeal : cCapTrim, 0.03, 5.0);
+        } else if (isBoatman) {
+          bBox(0.0, 0.0, 0.88, 0.50, 0.13, 0.32, cCrimson, 0, 5.0);
+          bBox(0.0, 0.0, 1.23, 0.48, 0.54, 0.30, cBody, 0, 5.0);
+          bBox(0.02, 0.0, 1.24, 0.28, 0.34, 0.31, cMonkTeal, 0, 5.0);
+        } else {
+          bBox(0.0, 0.0, 0.77, 0.56, 0.22, 0.34, isArcher ? cRanger : cArmor, 0, 5.0);
+          bBox(0.0, 0.0, 0.92, 0.52, 0.13, 0.33, cCrimson, 0, 5.0);
+          bBox(0.17, 0.0, 0.92, 0.18, 0.12, 0.05, cCrest, 0.05, 5.0);
+          bBox(0.0, 0.0, 1.24, 0.50, 0.56, 0.30, cBody, 0, 5.0);
+          bBox(0.03, 0.0, 1.28, 0.34, 0.36, 0.31, cCrest, 0.04, 5.0);
+          for (const s of [-1, 1]) {
+            bBox(0.0, s * 0.34, 1.46, 0.22, 0.22, 0.30, isArcher ? cRanger : cCrimson, 0, 5.0);
+            bBox(0.0, s * 0.35, 1.56, 0.24, 0.07, 0.32, cCrest, 0.04, 5.0);
+          }
+          if (isGuard) {
+            const capePitch = -0.14 - walkWeight * 0.22 - Math.sin(time * 3.1 + phase) * 0.06;
+            const capeB = pitchBasis(bRight, UP, bFwd, capePitch);
+            const shBackX = wx - bFwd[0] * 0.17 * sc, shBackY = footY + bob + 1.48 * sc, shBackZ = wz - bFwd[2] * 0.17 * sc;
+            gBox(shBackX - capeB.u[0] * 0.38 * sc, shBackY - capeB.u[1] * 0.38 * sc, shBackZ - capeB.u[2] * 0.38 * sc, bRight, capeB.u, capeB.f, 0.44, 0.76, 0.06, cCrimson, 0, 5.0);
+          } else if (isArcher) {
+            bBox(-0.20, -0.06, 1.28, 0.14, 0.46, 0.14, cWood, 0, 4.0);
+            bBox(-0.20, -0.06, 1.54, 0.16, 0.10, 0.16, [0.95, 0.94, 0.88], 0, 5.0);
+          }
         }
 
-        // Billowing Crimson Back Cloak
-        const capePitch = -0.14 - walkWeight * 0.22 - Math.sin(time * 3.1 + g.phase) * 0.06;
-        const capeB = pitchBasis(bRight, UP, bFwd, capePitch);
-        const shBackX = wx - bFwd[0] * 0.17 * sc;
-        const shBackY = footY + bob + 1.48 * sc;
-        const shBackZ = wz - bFwd[2] * 0.17 * sc;
-        gBox(shBackX - capeB.u[0] * 0.38 * sc, shBackY - capeB.u[1] * 0.38 * sc, shBackZ - capeB.u[2] * 0.38 * sc, bRight, capeB.u, capeB.f, 0.44, 0.76, 0.06, cCrimson, 0, 5.0);
-
-        // Articulated Head Look & Plumed War Helmet (Kabuto / Non Tru)
-        const hScanYaw = yaw + (1.0 - walkWeight) * Math.sin(time * 0.72 + g.phase * 2.1) * 0.26;
-        const hFwd = [Math.sin(hScanYaw), 0.0, Math.cos(hScanYaw)];
+        // Articulated Head + Alert Spirit-Gaze Reaction + Role Headgear
+        let hScanYaw = yaw + (1.0 - walkWeight) * Math.sin(time * 0.72 + phase * 2.1) * 0.24;
+        let headPitch = 0.0;
+        if (reactAmt > 0.02 && reactPt && (isGuard || isArcher)) {
+          const targetYaw = Math.atan2(reactPt[0] - wx, reactPt[2] - wz);
+          const dYaw = wrapAngle(targetYaw - hScanYaw);
+          hScanYaw += dYaw * reactAmt * 0.82;
+          headPitch = 0.28 * reactAmt;
+        }
+        const hFwd0 = [Math.sin(hScanYaw), 0.0, Math.cos(hScanYaw)];
         const hRight = [Math.cos(hScanYaw), 0.0, -Math.sin(hScanYaw)];
-        const headQ = quatFromFrame(hRight, UP, hFwd);
+        const headPB = pitchBasis(hRight, UP, hFwd0, headPitch);
+        const headQ = quatFromFrame(hRight, headPB.u, headPB.f);
+        const neckX = wx, neckY = footY + bob + 1.58 * sc, neckZ = wz;
         function hBox(fOff, rOff, uOff, sx, sy, sz, col, em = 0.0) {
-          pushBox(wx + (hFwd[0] * fOff + hRight[0] * rOff) * sc, footY + bob + uOff * sc, wz + (hFwd[2] * fOff + hRight[2] * rOff) * sc, headQ, sx * sc, sy * sc, sz * sc, col, em, 5.0);
+          pushBox(
+            neckX + (headPB.f[0] * fOff + hRight[0] * rOff + headPB.u[0] * uOff) * sc,
+            neckY + (headPB.f[1] * fOff + hRight[1] * rOff + headPB.u[1] * uOff) * sc,
+            neckZ + (headPB.f[2] * fOff + hRight[2] * rOff + headPB.u[2] * uOff) * sc,
+            headQ, sx * sc, sy * sc, sz * sc, col, em, 5.0
+          );
         }
-        hBox(0.0, 0.0, 1.59, 0.24, 0.10, 0.24, cBronze);
-        hBox(0.0, 0.0, 1.77, 0.33, 0.33, 0.33, cSkin);
-        for (const es of [-1, 1]) hBox(0.16, es * 0.08, 1.83, 0.06, 0.04, 0.04, cVisor);
-        hBox(0.02, 0.0, 1.69, 0.35, 0.13, 0.35, cVisor);
-        hBox(-0.02, 0.0, 1.97, 0.54, 0.08, 0.54, cSteel);
-        hBox(0.0, 0.0, 2.04, 0.46, 0.07, 0.46, cCrest, 0.05);
-        hBox(0.0, 0.0, 2.11, 0.40, 0.16, 0.40, cSteel);
-        hBox(0.0, 0.0, 2.23, 0.12, 0.14, 0.12, cCapTrim, 0.08);
-        hBox(-0.06, 0.0, 2.28 + Math.sin(time * 3.8 + g.phase) * 0.015, 0.10, isCap ? 0.34 : 0.24, isCap ? 0.26 : 0.20, cTassel, 0.04);
-        if (isCap) hBox(0.22, 0.0, 2.14, 0.24, 0.17, 0.06, cCapTrim, 0.12);
+        hBox(0.0, 0.0, 0.02, 0.24, 0.10, 0.24, isMonk || isScholar ? cBody : cBronze);
+        hBox(0.0, 0.0, 0.19, 0.33, 0.33, 0.33, cSkin);
+        for (const es of [-1, 1]) hBox(0.16, es * 0.08, 0.25, 0.06, 0.04, 0.04, cVisor);
+        if (isMonk || isBoatman) {
+          if (isMonk) hBox(0.16, 0.0, 0.08, 0.12, 0.15, 0.07, [0.88, 0.90, 0.94]);
+          hBox(-0.01, 0.0, 0.36, 0.68, 0.08, 0.68, cStraw);
+          hBox(-0.01, 0.0, 0.44, 0.42, 0.10, 0.42, cStraw);
+          hBox(-0.01, 0.0, 0.51, 0.16, 0.08, 0.16, cBronze);
+        } else if (isScholar) {
+          hBox(0.0, 0.0, 0.36, 0.36, 0.09, 0.36, cVisor);
+          hBox(-0.02, 0.0, 0.45, 0.16, 0.12, 0.16, cCapTrim);
+        } else {
+          hBox(0.02, 0.0, 0.11, 0.35, 0.13, 0.35, cVisor);
+          hBox(-0.02, 0.0, 0.39, 0.54, 0.08, 0.54, cSteel);
+          hBox(0.0, 0.0, 0.46, 0.46, 0.07, 0.46, cCrest, 0.05);
+          hBox(0.0, 0.0, 0.53, 0.40, 0.16, 0.40, cSteel);
+          if (isGuard) {
+            hBox(0.0, 0.0, 0.65, 0.12, 0.14, 0.12, cCapTrim, 0.08);
+            hBox(-0.06, 0.0, 0.70 + Math.sin(time * 3.8 + phase) * 0.015, 0.10, isCap ? 0.34 : 0.24, isCap ? 0.26 : 0.20, cTassel, 0.04);
+            if (isCap) hBox(0.22, 0.0, 0.56, 0.24, 0.17, 0.06, cCapTrim, 0.12);
+          }
+        }
 
-        // Right Arm (-bRight side): Spear / Halberd Bearer
-        const armPitchR = (g.z1 !== undefined) ? (0.34 + Math.sin(stridePhase) * armSwingAmp) : 0.38;
+        // Right Arm (-bRight side)
+        const armLen = 0.50 * sc;
+        const salutePitch = (isGuard && leftItem !== 'patrol') ? reactAmt * 0.32 : 0.0;
+        const rowCycle = isBoatman ? Math.sin(time * 2.2 + phase) : 0.0;
+        const armPitchR = isBoatman
+          ? (0.58 + rowCycle * 0.34)
+          : (walkWeight > 0.05 ? (0.34 + Math.sin(stridePhase) * armSwingAmp) : (isMonk ? 0.38 : (isScholar ? 0.16 : 0.38 + salutePitch)));
         const armRB = pitchBasis(bRight, UP, bFwd, armPitchR);
         const rShX = wx - bRight[0] * 0.35 * sc, rShY = footY + bob + 1.46 * sc, rShZ = wz - bRight[2] * 0.35 * sc;
-        const armLen = 0.50 * sc;
-        gBox(rShX - armRB.u[0] * armLen * 0.5, rShY - armRB.u[1] * armLen * 0.5, rShZ - armRB.u[2] * armLen * 0.5, bRight, armRB.u, armRB.f, 0.16, 0.48, 0.16, cSteel, 0, 5.0);
+        gBox(rShX - armRB.u[0] * armLen * 0.5, rShY - armRB.u[1] * armLen * 0.5, rShZ - armRB.u[2] * armLen * 0.5, bRight, armRB.u, armRB.f, 0.16, 0.48, 0.16, isMonk || isScholar || isBoatman ? cBody : cSteel, 0, 5.0);
         const rHandX = rShX - armRB.u[0] * armLen, rHandY = rShY - armRB.u[1] * armLen, rHandZ = rShZ - armRB.u[2] * armLen;
         gBox(rHandX, rHandY, rHandZ, bRight, armRB.u, armRB.f, 0.13, 0.11, 0.13, cSkin, 0, 5.0);
-        const polePitch = (g.z1 !== undefined) ? 0.18 : 0.0;
-        const poleB = pitchBasis(bRight, UP, bFwd, polePitch);
-        const poleBaseX = (g.z1 !== undefined) ? (rHandX - poleB.u[0] * 0.85 * sc) : rHandX;
-        const poleBaseY = (g.z1 !== undefined) ? (rHandY - poleB.u[1] * 0.85 * sc) : footY;
-        const poleBaseZ = (g.z1 !== undefined) ? (rHandZ - poleB.u[2] * 0.85 * sc) : rHandZ;
-        const poleLen = 2.52 * sc;
-        gBox(poleBaseX + poleB.u[0] * poleLen * 0.5, poleBaseY + poleB.u[1] * poleLen * 0.5, poleBaseZ + poleB.u[2] * poleLen * 0.5, bRight, poleB.u, poleB.f, 0.06, 2.52, 0.06, cWood, 0, 4.0);
-        const tipX = poleBaseX + poleB.u[0] * (poleLen + 0.16 * sc), tipY = poleBaseY + poleB.u[1] * (poleLen + 0.16 * sc), tipZ = poleBaseZ + poleB.u[2] * (poleLen + 0.16 * sc);
-        gBox(tipX, tipY, tipZ, bRight, poleB.u, poleB.f, 0.09, 0.36, 0.07, cBlade, 0.08, 5.0);
-        gBox(tipX - bRight[0] * 0.10 * sc - poleB.u[0] * 0.14 * sc, tipY - poleB.u[1] * 0.14 * sc, tipZ - bRight[2] * 0.10 * sc - poleB.u[2] * 0.14 * sc, bRight, poleB.u, poleB.f, 0.15, 0.18, 0.05, cBlade, 0.06, 5.0);
-        gBox(poleBaseX + poleB.u[0] * (poleLen - 0.14 * sc), poleBaseY + poleB.u[1] * (poleLen - 0.14 * sc), poleBaseZ + poleB.u[2] * (poleLen - 0.14 * sc), bRight, poleB.u, poleB.f, 0.11, 0.18, 0.11, cTassel, 0.04, 5.0);
 
-        // Left Arm (+bRight side): Patrol Swing / War Buckler / Glowing Imperial Hand Lantern
-        const armPitchL = (g.leftItem === 'lantern') ? (0.48 + Math.sin(time * 2.4 + g.phase) * 0.04) : (0.12 - Math.sin(stridePhase) * armSwingAmp);
+        if (isGuard) {
+          const isPatrol = walkWeight > 0.05;
+          const liftFrac = isPatrol ? 1.0 : smoothstep(0.0, 0.35, reactAmt);
+          const polePitch = isPatrol ? 0.18 : reactAmt * 0.24;
+          const poleB = pitchBasis(bRight, UP, bFwd, polePitch);
+          const poleBaseX = mix(rHandX, rHandX - poleB.u[0] * 0.85 * sc, liftFrac);
+          const poleBaseY = mix(footY, rHandY - poleB.u[1] * 0.85 * sc, liftFrac);
+          const poleBaseZ = mix(rHandZ, rHandZ - poleB.u[2] * 0.85 * sc, liftFrac);
+          const poleLen = 2.52 * sc;
+          gBox(poleBaseX + poleB.u[0] * poleLen * 0.5, poleBaseY + poleB.u[1] * poleLen * 0.5, poleBaseZ + poleB.u[2] * poleLen * 0.5, bRight, poleB.u, poleB.f, 0.06, 2.52, 0.06, cWood, 0, 4.0);
+          const tipX = poleBaseX + poleB.u[0] * (poleLen + 0.16 * sc), tipY = poleBaseY + poleB.u[1] * (poleLen + 0.16 * sc), tipZ = poleBaseZ + poleB.u[2] * (poleLen + 0.16 * sc);
+          gBox(tipX, tipY, tipZ, bRight, poleB.u, poleB.f, 0.09, 0.36, 0.07, cBlade, 0.08, 5.0);
+          gBox(tipX - bRight[0] * 0.10 * sc - poleB.u[0] * 0.14 * sc, tipY - poleB.u[1] * 0.14 * sc, tipZ - bRight[2] * 0.10 * sc - poleB.u[2] * 0.14 * sc, bRight, poleB.u, poleB.f, 0.15, 0.18, 0.05, cBlade, 0.06, 5.0);
+          gBox(poleBaseX + poleB.u[0] * (poleLen - 0.14 * sc), poleBaseY + poleB.u[1] * (poleLen - 0.14 * sc), poleBaseZ + poleB.u[2] * (poleLen - 0.14 * sc), bRight, poleB.u, poleB.f, 0.11, 0.18, 0.11, cTassel, 0.04, 5.0);
+        } else if (isMonk) {
+          gBox(rHandX, footY + 1.15 * sc, rHandZ, bRight, UP, bFwd, 0.06, 2.30, 0.06, cWood, 0, 4.0);
+          gBox(rHandX, footY + 2.34 * sc, rHandZ, bRight, UP, bFwd, 0.18, 0.20, 0.06, cCapTrim, 0.12, 5.0);
+        } else if (isBoatman) {
+          const oarPitch = 0.72 + rowCycle * 0.42;
+          const oarB = pitchBasis(bRight, UP, bFwd, oarPitch);
+          const oarTopX = rHandX + oarB.u[0] * 0.55 * sc, oarTopY = rHandY + oarB.u[1] * 0.55 * sc, oarTopZ = rHandZ + oarB.u[2] * 0.55 * sc;
+          gBox(oarTopX - oarB.u[0] * 1.45 * sc, oarTopY - oarB.u[1] * 1.45 * sc, oarTopZ - oarB.u[2] * 1.45 * sc, bRight, oarB.u, oarB.f, 0.07, 2.90, 0.07, cWood, 0, 4.0);
+          gBox(oarTopX - oarB.u[0] * 2.75 * sc, oarTopY - oarB.u[1] * 2.75 * sc, oarTopZ - oarB.u[2] * 2.75 * sc, bRight, oarB.u, oarB.f, 0.22, 0.56, 0.06, cStraw, 0, 4.0);
+        }
+
+        // Left Arm (+bRight side)
+        const armPitchL = (leftItem === 'lantern') ? (0.48 + Math.sin(time * 2.4 + phase) * 0.04) : (leftItem === 'bow' || leftItem === 'fan' ? 0.52 : (isBoatman ? (0.58 + rowCycle * 0.34) : (0.12 - Math.sin(stridePhase) * armSwingAmp)));
         const armLB = pitchBasis(bRight, UP, bFwd, armPitchL);
         const lShX = wx + bRight[0] * 0.35 * sc, lShY = footY + bob + 1.46 * sc, lShZ = wz + bRight[2] * 0.35 * sc;
-        gBox(lShX - armLB.u[0] * armLen * 0.5, lShY - armLB.u[1] * armLen * 0.5, lShZ - armLB.u[2] * armLen * 0.5, bRight, armLB.u, armLB.f, 0.16, 0.48, 0.16, cSteel, 0, 5.0);
+        gBox(lShX - armLB.u[0] * armLen * 0.5, lShY - armLB.u[1] * armLen * 0.5, lShZ - armLB.u[2] * armLen * 0.5, bRight, armLB.u, armLB.f, 0.16, 0.48, 0.16, isMonk || isScholar || isBoatman ? cBody : cSteel, 0, 5.0);
         const lHandX = lShX - armLB.u[0] * armLen, lHandY = lShY - armLB.u[1] * armLen, lHandZ = lShZ - armLB.u[2] * armLen;
         gBox(lHandX, lHandY, lHandZ, bRight, armLB.u, armLB.f, 0.13, 0.11, 0.13, cSkin, 0, 5.0);
-        if (g.leftItem === 'lantern') {
-          const swingL = Math.sin(time * 3.0 + g.phase) * 0.06;
+
+        if (leftItem === 'lantern') {
+          const swingL = Math.sin(time * 3.0 + phase) * 0.06;
           const lanX = lHandX + bFwd[0] * 0.16 * sc, lanY = lHandY - 0.18 * sc, lanZ = lHandZ + bFwd[2] * 0.16 * sc;
           gBox(lanX, lanY, lanZ, bRight, UP, bFwd, 0.22, 0.28, 0.22, cLantern, 0.42 + nightMix * 0.95, 5.0);
           gBox(lanX + swingL * bRight[0], lanY + 0.16 * sc, lanZ + swingL * bRight[2], bRight, UP, bFwd, 0.25, 0.06, 0.25, cBoot, 0, 5.0);
           gBox(lanX, lanY - 0.16 * sc, lanZ, bRight, UP, bFwd, 0.24, 0.05, 0.24, cBoot, 0, 5.0);
-        } else if (g.leftItem === 'shield') {
-          const shldX = lShX + bRight[0] * 0.12 * sc - armLB.u[0] * 0.32 * sc;
-          const shldY = lShY + bRight[1] * 0.12 * sc - armLB.u[1] * 0.32 * sc;
-          const shldZ = lShZ + bRight[2] * 0.12 * sc - armLB.u[2] * 0.32 * sc;
+        } else if (leftItem === 'shield') {
+          const shldX = lShX + bRight[0] * 0.12 * sc - armLB.u[0] * 0.32 * sc, shldY = lShY - armLB.u[1] * 0.32 * sc, shldZ = lShZ + bRight[2] * 0.12 * sc - armLB.u[2] * 0.32 * sc;
           gBox(shldX, shldY, shldZ, bRight, armLB.u, armLB.f, 0.08, 0.46, 0.44, cCrimson, 0, 5.0);
           gBox(shldX + bRight[0] * 0.045 * sc, shldY, shldZ + bRight[2] * 0.045 * sc, bRight, armLB.u, armLB.f, 0.05, 0.18, 0.18, cCrest, 0.06, 5.0);
+        } else if (leftItem === 'bow') {
+          const bowX = lHandX + bFwd[0] * 0.20 * sc, bowY = lHandY + 0.10 * sc, bowZ = lHandZ + bFwd[2] * 0.20 * sc;
+          gBox(bowX, bowY, bowZ, bRight, UP, bFwd, 0.06, 0.92, 0.08, cWood, 0, 4.0);
+          gBox(bowX - bFwd[0] * 0.12 * sc, bowY + 0.50 * sc, bowZ - bFwd[2] * 0.12 * sc, bRight, UP, bFwd, 0.05, 0.28, 0.18, cCapTrim, 0, 5.0);
+          gBox(bowX - bFwd[0] * 0.12 * sc, bowY - 0.50 * sc, bowZ - bFwd[2] * 0.12 * sc, bRight, UP, bFwd, 0.05, 0.28, 0.18, cCapTrim, 0, 5.0);
+          gBox(bowX + bFwd[0] * 0.14 * sc, bowY, bowZ + bFwd[2] * 0.14 * sc, bRight, UP, bFwd, 0.04, 0.04, 0.52, cBlade, 0.08, 5.0);
+        } else if (leftItem === 'fan') {
+          gBox(lHandX + bFwd[0] * 0.14 * sc, lHandY + 0.04 * sc, lHandZ + bFwd[2] * 0.14 * sc, bRight, UP, bFwd, 0.24, 0.18, 0.04, [0.98, 0.92, 0.78], 0.04, 5.0);
         }
+      }
+
+      for (let gi = 0; gi < CASTLE_PEOPLE.length; gi++) {
+        const g = CASTLE_PEOPLE[gi];
+        const wx = g.vx * VS, footY = (g.vy + 0.5) * VS;
+        let wz = g.vz * VS, yaw = g.yaw || 0.0, walkWeight = 0.0;
+        if (g.z1 !== undefined) {
+          const zA = g.vz * VS, zB = g.z1 * VS, dist = Math.abs(zB - zA);
+          const walkDur = dist / (g.speed || 1.35), pauseDur = 1.05, halfT = walkDur + pauseDur, fullT = halfT * 2.0;
+          const cyc = ((time + g.phase * 1.9) % fullT + fullT) % fullT;
+          const yawForward = zB > zA ? 0.0 : Math.PI, yawBack = yawForward + Math.PI;
+          if (cyc < walkDur) { const p = cyc / walkDur; wz = mix(zA, zB, p); yaw = yawForward; walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p)); }
+          else if (cyc < halfT) { wz = zB; yaw = yawForward + Math.PI * smoothstep(0.18, 0.86, (cyc - walkDur) / pauseDur); }
+          else if (cyc < halfT + walkDur) { const p = (cyc - halfT) / walkDur; wz = mix(zB, zA, p); yaw = yawBack; walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p)); }
+          else { wz = zA; yaw = yawBack + Math.PI * smoothstep(0.18, 0.86, (cyc - halfT - walkDur) / pauseDur); }
+        }
+        renderPerson(wx, footY, wz, yaw, g.role, g.leftItem, g.phase, walkWeight, time * 6.2 + g.phase * 3.1, 1.0);
+      }
+
+      if (boatState) {
+        const bmX = boatState.bx + boatState.fwd[0] * 0.92;
+        const bmY = boatState.by + 0.22;
+        const bmZ = boatState.bz + boatState.fwd[2] * 0.92;
+        renderPerson(bmX, bmY, bmZ, Math.atan2(boatState.fwd[0], boatState.fwd[2]) - 1.15, 'boatman', 'none', 1.3, 0.0, time * 2.2, 0.94);
+      }
+
+      if (boatState && boatState.waterVis > 0.08) {
+        const vis = boatState.waterVis;
+        const lTh = XUANWU_CFG.theta + Math.PI;
+        const p0 = XUANWU_CFG.orbitFn(lTh), p1 = XUANWU_CFG.orbitFn(lTh + 0.05);
+        const lF = norm3(sub(p1, p0));
+        const bob = Math.sin(time * 1.9 + 1.1) * 0.14 * vis;
+        const lx = p0[0], ly = p0[1] + 0.28 + bob - (1.0 - vis) * 2.2, lz = p0[2];
+        const lQ = quatFromBasis([lF[0], bob * 0.14, lF[2]], Math.sin(time * 1.5) * 0.05);
+        const lR = norm3(cross([0, 1, 0], lF));
+        pushBox(lx, ly, lz, lQ, 1.65 * vis, 0.48 * vis, 4.40 * vis, [0.40, 0.23, 0.12], 0, 4.0);
+        pushBox(lx, ly + 0.72 * vis, lz - lF[2] * 0.2, lQ, 1.38 * vis, 0.16 * vis, 2.05 * vis, cCrimson, 0.06, 5.0);
+        for (const s of [-0.58, 0.58]) for (const fz of [-0.85, 0.55]) {
+          pushBox(lx + lR[0] * s * vis + lF[0] * fz * vis, ly + 0.44 * vis, lz + lR[2] * s * vis + lF[2] * fz * vis, lQ, 0.09 * vis, 0.58 * vis, 0.09 * vis, cCapTrim, 0.1, 5.0);
+        }
+        const lanGlow = (1.15 + nightMix * 1.25) * vis;
+        for (const [fx, rx, uy] of [[1.65, 0, 0.50], [-1.75, 0, 0.56], [0.55, 0.72, 0.82], [0.55, -0.72, 0.82]]) {
+          pushBox(lx + lF[0] * fx * vis + lR[0] * rx * vis, ly + uy * vis, lz + lF[2] * fx * vis + lR[2] * rx * vis, ID_Q, 0.34 * vis, 0.38 * vis, 0.34 * vis, [1.0, 0.78, 0.26], lanGlow, 5.0);
+        }
+        renderPerson(lx + lF[0] * 1.05 * vis, ly + 0.24 * vis, lz + lF[2] * 1.05 * vis, Math.atan2(lF[0], lF[2]), 'scholar', 'lantern', 4.1, 0.0, time * 2.0, 0.92 * vis);
       }
     }
 
@@ -5383,6 +5600,8 @@
         : baseFovY;
       const proj = mat4Perspective(fov, aspect, 0.6, 360.0);
       const view = mat4LookAt(eye, target, [0, 1, 0]);
+      lastCamVP = mat4Mul(proj, view);
+      lastProjM5 = proj[5];
       const camFwd = norm3(sub(target, eye));
       const camRight = norm3(cross(camFwd, [0, 1, 0]));
       const camUp = cross(camRight, camFwd);
@@ -5401,6 +5620,20 @@
       const nightGlowMult = currentTimeMode === 'night' ? 1.58 : 1.0;
       const xwMarks = drawXuanwu(XUANWU_CFG, simTime, nightGlowMult, boostRamp, waterCoverSmooth, XUANWU_CFG.summonBoost || 0);
       const phMarks = drawPhoenix(phPos, phFwd, phStancePitch, phRoll, phWingSpread, phWingFlap, phHeadYaw, phHeadPitch, phoenixJawOpen, phFlyIntensity, simTime, nightGlowMult, boostRamp);
+
+      spiritPickAnchors.length = 0;
+      for (const [k, sk] of [['green', skelGreen], ['white', skelWhite], ['black', skelBlack]]) {
+        for (let si = 0; si < sk.pos.length; si += 11) {
+          const p = sk.pos[si];
+          spiritPickAnchors.push([k, p[0], p[1], p[2], si === 0 ? 3.2 : 2.5]);
+        }
+      }
+      spiritPickAnchors.push(['phoenix', phPos[0], phPos[1] + 2.2, phPos[2], 3.8]);
+      if (phMarks && phMarks.wingTips) {
+        for (const wt of phMarks.wingTips) spiritPickAnchors.push(['phoenix', wt[0], wt[1], wt[2], 3.2]);
+      }
+      spiritPickAnchors.push(['xuanwu', xwMarks.shellC[0], xwMarks.shellC[1], xwMarks.shellC[2], 4.8]);
+      spiritPickAnchors.push(['xuanwu', xwMarks.serpentHead[0], xwMarks.serpentHead[1], xwMarks.serpentHead[2], 3.6]);
 
       // 3-Dragon 5-Strand Elemental Aura Trails (125u+ Tail-Wake + Flanks) & Blazing Molten Lava Dripping Phoenix during Bức Tốc (H)
       if (needBoostBurst) {
@@ -5712,13 +5945,15 @@
         pushBox(p.x, p.y, p.z, ID_Q, sc, sc, sc, col, 2.2 * (1 - u), 5.0);
       }
 
-      // 5. Boat, Drawbridge Cables, Banners, Braziers, Waterfalls, Weather, Lanterns, Clouds, Sea of Clouds, Cranes
+      // 5. Boat, Boatman, Lantern Boat, Banners, Braziers, Waterfalls, Weather, Sky Lanterns, Petals, Fireflies & Castle Life
       const boatBob = Math.sin(simTime * 2.2) * 0.14;
-      const boatQ = quatFromBasis([0.92, boatBob * 0.15, 0.38], Math.sin(simTime * 1.8) * 0.06);
+      const boatFwd = norm3([0.92, boatBob * 0.15, 0.38]);
+      const boatQ = quatFromBasis(boatFwd, Math.sin(simTime * 1.8) * 0.06);
       const bx = -27 * VS, by = 14.5 * VS + boatBob, bz = 62 * VS;
       pushBox(bx, by, bz, boatQ, 1.45, 0.45, 3.25, [0.46, 0.28, 0.14], 0, 4.0);
       pushBox(bx, by + 0.42, bz - 0.2, boatQ, 1.20, 0.65, 1.40, [0.68, 0.52, 0.34], 0, 4.0);
       pushBox(bx + 0.58, by + 0.62, bz + 1.50, boatQ, 0.34, 0.42, 0.34, [1.0, 0.72, 0.24], 2.0, 5.0);
+      const boatState = { bx, by, bz, fwd: boatFwd, waterVis: smoothstep(0.18, 0.84, waterCoverSmooth) };
 
       pushCable([-7 * VS, 40 * VS, 53 * VS], [-7 * VS, 19 * VS, 75 * VS], [0.20, 0.18, 0.16]);
       pushCable([7 * VS, 40 * VS, 53 * VS], [7 * VS, 19 * VS, 75 * VS], [0.20, 0.18, 0.16]);
@@ -5801,16 +6036,50 @@
         }
       }
 
-      for (const l of lanterns) {
-        const ly = ((l.y + simTime * l.speed) % 42) + 5, lx = l.x + Math.sin(simTime * 0.85 + l.phase) * 0.9, lz = l.z + Math.cos(simTime * 0.75 + l.phase) * 0.9;
-        if ((lx - eye[0]) ** 2 + (ly - eye[1]) ** 2 + (lz - eye[2]) ** 2 < 64) continue;
-        pushBox(lx, ly, lz, ID_Q, 0.38, 0.56, 0.38, [1.0, 0.66, 0.22], 2.2, 5.0);
+      const skyLanternVis = currentTimeMode === 'night' ? 1.0 : (currentTimeMode === 'sunset' ? 0.52 : 0.0);
+      if (skyLanternVis > 0.02) {
+        for (let li = 0; li < lanterns.length; li++) {
+          const l = lanterns[li];
+          const ly = ((l.y + simTime * l.speed) % 48) + 6;
+          const fadeTop = smoothstep(54, 46, ly) * smoothstep(6, 11, ly);
+          const lx = l.x + Math.sin(simTime * 0.85 + l.phase) * 1.1;
+          const lz = l.z + Math.cos(simTime * 0.75 + l.phase) * 1.1;
+          if ((lx - eye[0]) ** 2 + (ly - eye[1]) ** 2 + (lz - eye[2]) ** 2 < 49) continue;
+          const flk = 0.85 + 0.25 * Math.sin(simTime * 9.5 + li * 2.3);
+          const scL = (0.78 + 0.22 * fadeTop) * skyLanternVis;
+          pushBox(lx, ly, lz, ID_Q, 0.46 * scL, 0.62 * scL, 0.46 * scL, [1.0, 0.66, 0.22], 1.55 * skyLanternVis * flk, 5.0);
+          pushBox(lx, ly + 0.34 * scL, lz, ID_Q, 0.50 * scL, 0.07 * scL, 0.50 * scL, [0.22, 0.14, 0.10], 0, 5.0);
+          pushBox(lx, ly - 0.28 * scL, lz, ID_Q, 0.18 * scL, 0.18 * scL, 0.18 * scL, [1.0, 0.90, 0.48], 2.5 * skyLanternVis * flk, 5.0);
+        }
       }
       if (currentWeather === 'clear' || currentWeather === 'fog') {
-        for (const p of petals) {
-          const py = 17 - ((simTime * 1.2 + p.phase * 2.0) % 12), px = p.x + Math.sin(simTime * 1.4 + p.phase) * 1.8, pz = p.z + Math.cos(simTime * 1.2 + p.phase) * 1.8;
-          if ((px - eye[0]) ** 2 + (py - eye[1]) ** 2 + (pz - eye[2]) ** 2 < 64) continue;
-          pushBox(px, py, pz, ID_Q, 0.20, 0.12, 0.20, [1.0, 0.72, 0.84], 0.2, 5.0);
+        for (let q = 0; q < 24; q++) {
+          const ph = (q / 24) * 6.2831853;
+          SNOW_QUATS[q] = quatFromBasis([Math.cos(ph + simTime * 1.6), 0.55, Math.sin(ph + simTime * 1.6)], ph + simTime * 2.2);
+        }
+        for (let pi = 0; pi < petals.length; pi++) {
+          const p = petals[pi];
+          const cyc = ((simTime * p.speed + p.phase) % 6.0) / 6.0;
+          const py = p.by - cyc * p.drop;
+          const swayR = 0.4 + cyc * 2.2;
+          const px = p.bx + Math.sin(simTime * 1.45 + p.phase) * swayR + cyc * 1.4;
+          const pz = p.bz + Math.cos(simTime * 1.25 + p.phase) * swayR;
+          if ((px - eye[0]) ** 2 + (py - eye[1]) ** 2 + (pz - eye[2]) ** 2 < 36) continue;
+          pushBox(px, py, pz, SNOW_QUATS[pi % 24], 0.22, 0.06, 0.16, [1.0, 0.74, 0.87], 0.14, 5.0);
+        }
+      }
+      const fireflyVis = currentTimeMode === 'night' ? 1.0 : (currentTimeMode === 'sunset' ? 0.38 : 0.0);
+      if (fireflyVis > 0.02) {
+        for (let fi = 0; fi < fireflies.length; fi++) {
+          const f = fireflies[fi];
+          const blink = Math.pow(Math.max(0.0, Math.sin(simTime * (1.7 + f.rate) + f.phase)), 2.2);
+          if (blink < 0.09) continue;
+          const fx = f.ax + Math.sin(simTime * 0.75 + f.phase) * 1.5;
+          const fy = f.ay + Math.sin(simTime * 1.15 + f.phase * 1.7) * 0.8;
+          const fz = f.az + Math.cos(simTime * 0.68 + f.phase) * 1.5;
+          if ((fx - eye[0]) ** 2 + (fy - eye[1]) ** 2 + (fz - eye[2]) ** 2 < 25) continue;
+          const fsz = (0.11 + 0.07 * blink) * fireflyVis;
+          pushBox(fx, fy, fz, ID_Q, fsz, fsz, fsz, [0.80, 1.0, 0.34], (1.4 + 2.1 * blink) * fireflyVis, 5.0);
         }
       }
       for (const c of clouds) {
@@ -5837,7 +6106,10 @@
         pushBox(cx + bRight[0] * 0.42, cy + flap, cz + bRight[2] * 0.42, quatFromBasis(bf, flap * 1.2), 0.72, 0.08, 0.26, [0.98, 0.98, 0.97], 0, 5.0);
         pushBox(cx - bRight[0] * 0.42, cy + flap, cz - bRight[2] * 0.42, quatFromBasis(bf, -flap * 1.2), 0.72, 0.08, 0.26, [0.98, 0.98, 0.97], 0, 5.0);
       }
-      drawGuards(simTime, nightGlowMult);
+      const xwEvt = (xuanwuSummonTime >= 0 || XUANWU_CFG.chargePose > 0.05 || (XUANWU_CFG.summonBoost || 0) > 0.05) ? clamp(Math.max(XUANWU_CFG.chargePose || 0, XUANWU_CFG.slamPose || 0, XUANWU_CFG.summonBoost || 0), 0, 1) : 0;
+      const reactSalute = clamp(Math.max(xwEvt, convTime >= 0 ? 0.95 : 0.0, boostRamp), 0, 1);
+      const reactFocus = xwEvt > 0.08 ? xwMarks.serpentHead : (convTime >= 0 ? CONVERGE_POINT : (boostRamp > 0.08 ? phPos : null));
+      drawCastleLife(simTime, nightGlowMult, boatState, { salute: reactSalute, focusPos: reactFocus });
 
       gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, instArray.subarray(0, instCount * INST_FLOATS));
