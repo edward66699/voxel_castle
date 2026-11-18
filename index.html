@@ -504,21 +504,107 @@
       }
 
       playXuanwuWater(on = true) {
+        this.init();
         if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(on ? 110 : 146, now);
-        osc.frequency.exponentialRampToValueAtTime(on ? 65 : 82, now + 1.8);
-        const g = this.ctx.createGain();
-        g.gain.setValueAtTime(0.001, now);
-        g.gain.linearRampToValueAtTime(0.32, now + 0.12);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
-        osc.connect(g); g.connect(this.reverbIn);
-        osc.start(now); osc.stop(now + 2.1);
-        const notes = on ? [440, 587.33, 739.99, 880] : [587.33, 440, 329.63];
-        notes.forEach((f, idx) => setTimeout(() => this.playKoto(f, 0.14, true), idx * 110));
+        if (on) {
+          // Stage 1 (0.0s -> 1.05s): Ancient Tortoise Primordial Bellow + Coiled Serpent Fierce Hiss & Hydro-Rune Charge
+          const bellow1 = this.ctx.createOscillator();
+          const bellow2 = this.ctx.createOscillator();
+          bellow1.type = 'sawtooth';
+          bellow2.type = 'triangle';
+          bellow1.frequency.setValueAtTime(68, now);
+          bellow1.frequency.exponentialRampToValueAtTime(42, now + 0.32);
+          bellow1.frequency.exponentialRampToValueAtTime(96, now + 0.78);
+          bellow1.frequency.exponentialRampToValueAtTime(36, now + 1.15);
+          bellow2.frequency.setValueAtTime(136, now);
+          bellow2.frequency.exponentialRampToValueAtTime(84, now + 0.32);
+          bellow2.frequency.exponentialRampToValueAtTime(192, now + 0.78);
+          bellow2.frequency.exponentialRampToValueAtTime(72, now + 1.15);
+          const rFilt = this.ctx.createBiquadFilter();
+          rFilt.type = 'lowpass'; rFilt.Q.value = 3.4;
+          rFilt.frequency.setValueAtTime(190, now);
+          rFilt.frequency.exponentialRampToValueAtTime(620, now + 0.76);
+          rFilt.frequency.exponentialRampToValueAtTime(140, now + 1.18);
+          const rGain = this.ctx.createGain();
+          rGain.gain.setValueAtTime(0.001, now);
+          rGain.gain.linearRampToValueAtTime(0.36, now + 0.14);
+          rGain.gain.linearRampToValueAtTime(0.42, now + 0.78);
+          rGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.22);
+          bellow1.connect(rFilt); bellow2.connect(rFilt); rFilt.connect(rGain); rGain.connect(this.reverbIn);
+          bellow1.start(now); bellow1.stop(now + 1.25);
+          bellow2.start(now); bellow2.stop(now + 1.25);
+
+          // Serpent high-pitched resonant shriek + hiss during charge (0.12s -> 1.02s)
+          const sCry = this.ctx.createOscillator();
+          sCry.type = 'sine';
+          sCry.frequency.setValueAtTime(510, now + 0.12);
+          sCry.frequency.exponentialRampToValueAtTime(920, now + 0.58);
+          sCry.frequency.exponentialRampToValueAtTime(640, now + 1.02);
+          const sGain = this.ctx.createGain();
+          sGain.gain.setValueAtTime(0.0001, now + 0.12);
+          sGain.gain.linearRampToValueAtTime(0.14, now + 0.28);
+          sGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.04);
+          sCry.connect(sGain); sGain.connect(this.reverbIn);
+          sCry.start(now + 0.12); sCry.stop(now + 1.06);
+
+          const hSrc = this.ctx.createBufferSource(); hSrc.buffer = this.noiseBuf;
+          const hBp = this.ctx.createBiquadFilter();
+          hBp.type = 'bandpass'; hBp.Q.value = 2.6;
+          hBp.frequency.setValueAtTime(1500, now + 0.10);
+          hBp.frequency.exponentialRampToValueAtTime(3200, now + 0.72);
+          hBp.frequency.exponentialRampToValueAtTime(1800, now + 1.04);
+          const hGain = this.ctx.createGain();
+          hGain.gain.setValueAtTime(0.001, now + 0.10);
+          hGain.gain.linearRampToValueAtTime(0.24, now + 0.35);
+          hGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
+          hSrc.connect(hBp); hBp.connect(hGain); hGain.connect(this.reverbIn);
+          hSrc.start(now + 0.10); hSrc.stop(now + 1.08);
+
+          // Ascending hydro-rune koto chime during 1s charge
+          [293.66, 440.0, 587.33, 880.0, 1174.66].forEach((f, idx) => {
+            setTimeout(() => this.playKoto(f, 0.16, true), idx * 170);
+          });
+
+          // Stage 2 (1.05s -> 3.6s): Colossal Tidal Tsunami Impact & Roaring Ocean Surge
+          const tWave = now + 1.04;
+          const sub = this.ctx.createOscillator();
+          sub.type = 'sine';
+          sub.frequency.setValueAtTime(98, tWave);
+          sub.frequency.exponentialRampToValueAtTime(28, tWave + 2.2);
+          const subG = this.ctx.createGain();
+          subG.gain.setValueAtTime(0.001, tWave);
+          subG.gain.linearRampToValueAtTime(0.52, tWave + 0.08);
+          subG.gain.exponentialRampToValueAtTime(0.0001, tWave + 2.35);
+          sub.connect(subG); subG.connect(this.master);
+          sub.start(tWave); sub.stop(tWave + 2.4);
+
+          const wSrc = this.ctx.createBufferSource(); wSrc.buffer = this.noiseBuf;
+          const wLp = this.ctx.createBiquadFilter();
+          wLp.type = 'lowpass'; wLp.Q.value = 1.4;
+          wLp.frequency.setValueAtTime(220, tWave);
+          wLp.frequency.exponentialRampToValueAtTime(1280, tWave + 0.45);
+          wLp.frequency.exponentialRampToValueAtTime(260, tWave + 2.5);
+          const wGain = this.ctx.createGain();
+          wGain.gain.setValueAtTime(0.001, tWave);
+          wGain.gain.linearRampToValueAtTime(0.46, tWave + 0.22);
+          wGain.gain.exponentialRampToValueAtTime(0.0001, tWave + 2.6);
+          wSrc.connect(wLp); wLp.connect(wGain); wGain.connect(this.reverbIn);
+          wSrc.start(tWave); wSrc.stop(tWave + 2.65);
+        } else {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(142, now);
+          osc.frequency.exponentialRampToValueAtTime(48, now + 1.6);
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.linearRampToValueAtTime(0.30, now + 0.10);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
+          osc.connect(g); g.connect(this.reverbIn);
+          osc.start(now); osc.stop(now + 1.75);
+          [587.33, 440, 293.66].forEach((f, idx) => setTimeout(() => this.playKoto(f, 0.14, true), idx * 120));
+        }
       }
 
       playCrimsonBoostClimax() {
@@ -741,22 +827,83 @@
       col += vec3(0.28, 0.44, 0.78) * uLightning * (0.20 + 0.35 * smoothstep(-0.1, 0.4, dir.y));
 
       if (uCrimsonGlow > 0.01) {
-        float w1 = sin(dir.x * 5.2 + dir.z * 3.1 - uTime * 2.1) * cos(dir.z * 4.4 - uTime * 1.6);
-        float band = pow(clamp(0.55 + 0.45 * w1, 0.0, 1.0), 1.8) * smoothstep(-0.15, 0.45, dir.y);
-        col += vec3(0.88, 0.11, 0.04) * uCrimsonGlow * (0.28 + 0.55 * band);
-        col += vec3(1.00, 0.35, 0.05) * uCrimsonGlow * smoothstep(0.32, -0.18, dir.y) * 0.42;
+        vec3 galUp = normalize(vec3(0.42, 0.78, -0.46));
+        vec3 galRight = normalize(vec3(0.84, -0.20, 0.50));
+        vec3 galFwd = cross(galUp, galRight);
+        float gLat = dot(dir, galUp);
+        float gLon = atan(dot(dir, galFwd), dot(dir, galRight));
+
+        float w1 = sin(gLon * 2.4 + uTime * 0.12) * 0.065 + cos(gLon * 5.1 - uTime * 0.16) * 0.032;
+        float w2 = sin(gLon * 8.5 + gLat * 14.0 - uTime * 0.20) * 0.5 + 0.5;
+        float w3 = cos(gLon * 13.0 - gLat * 22.0 + uTime * 0.15) * 0.5 + 0.5;
+        float w4 = sin(gLon * 23.0 + gLat * 31.0) * cos(gLon * 17.0 - gLat * 19.0) * 0.5 + 0.5;
+
+        float bandLat = gLat + w1;
+        float galSpine = exp(-abs(bandLat) * 5.2);
+        float galHalo = exp(-abs(bandLat) * 2.0);
+        float coreBulge = exp(-bandLat * bandLat * 16.0) * pow(clamp(0.5 + 0.5 * cos(gLon + 0.65), 0.0, 1.0), 1.6);
+
+        float riftPattern = abs(sin(gLon * 4.2 + w2 * 2.1) * cos(bandLat * 19.5 + w3 * 2.4));
+        float darkRift = smoothstep(0.06, 0.54, riftPattern) * exp(-bandLat * bandLat * 58.0);
+
+        vec3 nebViolet = vec3(0.36, 0.12, 0.84);
+        vec3 nebCyan = vec3(0.08, 0.62, 0.96);
+        vec3 nebMagenta = vec3(0.88, 0.22, 0.68);
+        vec3 coreGold = vec3(1.00, 0.82, 0.50);
+
+        vec3 galCol = mix(nebViolet, nebCyan, smoothstep(0.18, 0.82, w2)) * galHalo * 0.66;
+        galCol += mix(nebMagenta, nebCyan, w3) * galSpine * (0.45 + 0.55 * w4) * 0.88;
+        galCol += coreGold * (coreBulge * 1.15 + pow(galSpine, 2.4) * 0.42);
+        galCol *= (1.0 - darkRift * 0.78);
+
+        float skyMask = smoothstep(-0.16, 0.12, dir.y);
+        col += galCol * uCrimsonGlow * skyMask * 1.24;
+
+        // Uniform Cube-Mapped Pinpoint Starfield (zero rectangular grid tiles!)
+        vec3 ad = abs(dir);
+        vec2 cProj = (ad.y >= ad.x && ad.y >= ad.z) ? (dir.xz / max(ad.y, 0.001) + vec2(1.0, 3.0))
+                   : ((ad.x >= ad.z) ? (dir.yz / max(ad.x, 0.001) + vec2(5.0, 7.0)) : (dir.xy / max(ad.z, 0.001) + vec2(9.0, 11.0)));
+
+        for (int layer = 0; layer < 2; layer++) {
+          float scale = (layer == 0) ? 95.0 : 46.0;
+          vec2 st = cProj * scale + float(layer) * 19.7;
+          vec2 cell = floor(st);
+          vec2 fUv = fract(st);
+          float h1 = hash21(cell + 0.13);
+          float h2 = hash21(cell + 7.31);
+          float h3 = hash21(cell + 13.7);
+          float density = (layer == 0) ? mix(0.955, 0.76, clamp(galSpine * 1.15, 0.0, 1.0)) : mix(0.985, 0.92, galHalo);
+          if (h1 > density) {
+            vec2 off = vec2(0.24) + vec2(h2, h3) * 0.52;
+            float dStar = length(fUv - off);
+            float rad = (layer == 0) ? 0.14 : 0.22;
+            float pin = exp(-(dStar * dStar) / (rad * rad * 0.35)) * smoothstep(rad * 1.6, 0.0, dStar);
+            float tw = 0.62 + 0.38 * sin(uTime * (2.2 + h2 * 4.8) + h3 * 75.0);
+            vec3 sCol = (layer == 0)
+              ? mix(vec3(0.74, 0.90, 1.00), vec3(1.00, 0.86, 0.62), h3)
+              : mix(vec3(0.58, 0.92, 1.00), vec3(0.98, 0.62, 1.00), h2);
+            col += sCol * pin * tw * ((layer == 0) ? 1.15 : 1.55) * uCrimsonGlow * skyMask * (0.85 + coreBulge * 0.55);
+          }
+        }
       }
 
       if (uStarAmount > 0.01 && dir.y > 0.04) {
-        vec2 grid = floor(vec2(atan(dir.z, dir.x) * 130.0, dir.y * 210.0));
-        float r = hash21(grid);
-        if (r > 0.986) {
-          float tw = 0.55 + 0.45 * sin(uTime * (1.8 + r * 4.2) + r * 62.0);
-          col += vec3(0.85, 0.93, 1.0) * tw * uStarAmount * smoothstep(0.04, 0.35, dir.y);
+        vec3 ad0 = abs(dir);
+        vec2 c0 = (ad0.y >= ad0.x && ad0.y >= ad0.z) ? dir.xz / max(ad0.y, 0.001) : ((ad0.x >= ad0.z) ? dir.yz / max(ad0.x, 0.001) + 4.0 : dir.xy / max(ad0.z, 0.001) + 8.0);
+        vec2 gSt = c0 * 58.0;
+        vec2 gCell = floor(gSt), gF = fract(gSt);
+        float r = hash21(gCell);
+        if (r > 0.955) {
+          vec2 off0 = vec2(0.25) + vec2(hash21(gCell + 3.1), hash21(gCell + 9.4)) * 0.50;
+          float d0 = length(gF - off0);
+          float pin0 = exp(-(d0 * d0) / 0.012) * smoothstep(0.28, 0.0, d0);
+          float tw = 0.58 + 0.42 * sin(uTime * (1.8 + r * 4.2) + r * 62.0);
+          col += vec3(0.85, 0.93, 1.0) * pin0 * tw * 1.45 * uStarAmount * smoothstep(0.04, 0.35, dir.y);
         }
       }
       fragColor = vec4(col, 1.0);
-      fragGlow = vec4(uSunColor * (sunDisc * 0.9 + pow(sunDot, 20.0) * 0.30) * uSunVis + vec3(0.75, 0.08, 0.02) * uCrimsonGlow * 0.32, 1.0);
+      vec3 galBloom = max(col - vec3(0.42), vec3(0.0)) * uCrimsonGlow * 0.45;
+      fragGlow = vec4(uSunColor * (sunDisc * 0.9 + pow(sunDot, 20.0) * 0.30) * uSunVis + galBloom, 1.0);
     }`;
 
     const shadowStaticVS = `#version 300 es
@@ -861,53 +1008,114 @@
       float isOceanFloor = (style > 7.5) ? 1.0 : 0.0;
 
       if (isOceanFloor > 0.5) {
-        if (uSeaWater < 0.01) {
-          float abyssFog = clamp(exp(-5.0 * 0.36) * 0.76, 0.0, 0.92);
-          float distFog0 = clamp(1.0 - exp(-pow(max(dist - (84.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
-          outColor = mix(baseCol * (uAmbientColor + uSunColor * 0.22), mix(uFogColor, uFogHorizon, 0.68), clamp(abyssFog + distFog0, 0.0, 0.94));
+        float abyssFog0 = clamp(exp(-5.0 * 0.36) * 0.76, 0.0, 0.92);
+        float distFog0 = clamp(1.0 - exp(-pow(max(dist - (84.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
+        vec3 abyssCol = mix(baseCol * (uAmbientColor + uSunColor * 0.22), mix(uFogColor, uFogHorizon, 0.68), clamp(abyssFog0 + distFog0, 0.0, 0.94));
+        float waveFront = smoothstep(-7.0, 3.5, uWaterWaveR - distXuanwu);
+        float effWater = uSeaWater * waveFront;
+        if (effWater < 0.005) {
+          outColor = abyssCol;
           outGlow = vec3(0.0);
           return;
         }
-        float phA = dot(worldPos.xz, vec2(0.86, 0.51)) * 0.38 + uTime * 2.15;
-        float phB = dot(worldPos.xz, vec2(-0.56, 0.83)) * 0.52 - uTime * 1.75;
-        float phC = dot(worldPos.xz, vec2(0.32, -0.95)) * 1.05 + uTime * 2.85;
-        float wave1 = sin(phA) * 0.58 + sin(phB) * 0.42;
-        float wave2 = sin(phC) * 0.50 + 0.50 * sin(phA * 1.7 - phB * 1.3);
-        float swell = sin(worldPos.x * 0.24 + uTime * 1.85) * cos(worldPos.z * 0.22 - uTime * 1.45);
-        float nxG = 0.20 * cos(phA) * 0.86 - 0.16 * cos(phB) * 0.56 + 0.10 * cos(phC) * 0.32;
-        float nzG = 0.20 * cos(phA) * 0.51 + 0.16 * cos(phB) * 0.83 - 0.10 * cos(phC) * 0.95;
-        float wakeRing = exp(-max(distXuanwu - 3.6, 0.0) * 0.13) * (0.35 + 0.65 * pow(0.5 + 0.5 * sin(distXuanwu * 1.65 - uTime * 4.4), 2.0));
-        float shockRing = exp(-abs(distXuanwu - uWaterWaveR) * 0.22) * uSeaSummonFlash;
-        N = normalize(vec3(nxG, 1.0, nzG));
+        float phA = dot(worldPos.xz, vec2(0.86, 0.51)) * 0.42 + uTime * 2.15;
+        float phB = dot(worldPos.xz, vec2(-0.56, 0.83)) * 0.58 - uTime * 1.80;
+        float phC = dot(worldPos.xz, vec2(0.32, -0.95)) * 1.15 + uTime * 2.95;
+        float phD = dot(worldPos.xz, vec2(0.74, -0.67)) * 2.35 - uTime * 3.85;
+        float phE = dot(worldPos.xz, vec2(-0.91, -0.41)) * 3.65 + uTime * 4.60;
+
+        float wave1 = sin(phA) * 0.56 + sin(phB) * 0.44;
+        float wave2 = sin(phC) * 0.52 + 0.48 * sin(phA * 1.6 - phB * 1.3);
+        float capRipple = sin(phD) * 0.5 + cos(phE + wave1 * 1.2) * 0.5;
+        float swell = sin(worldPos.x * 0.22 + uTime * 1.75) * cos(worldPos.z * 0.20 - uTime * 1.40);
+
+        float nxG = 0.21 * cos(phA) * 0.86 - 0.17 * cos(phB) * 0.56 + 0.11 * cos(phC) * 0.32 + 0.065 * cos(phD) * 0.74 - 0.045 * cos(phE) * 0.91;
+        float nzG = 0.21 * cos(phA) * 0.51 + 0.17 * cos(phB) * 0.83 - 0.11 * cos(phC) * 0.95 - 0.065 * cos(phD) * 0.67 - 0.045 * cos(phE) * 0.41;
+
+        float wakeRing = exp(-max(distXuanwu - 3.4, 0.0) * 0.12) * (0.30 + 0.70 * pow(0.5 + 0.5 * sin(distXuanwu * 1.75 - uTime * 4.6), 2.2));
+        float shockRing = exp(-abs(distXuanwu - uWaterWaveR) * 0.24) * smoothstep(2.5, 9.0, uWaterWaveR) * (1.0 - smoothstep(195.0, 235.0, uWaterWaveR));
+        vec2 radDir = camDeltaXZ / max(distXuanwu, 0.001);
+        N = normalize(vec3(nxG + radDir.x * shockRing * 0.38, 1.0, nzG + radDir.y * shockRing * 0.38));
 
         vec3 L = normalize(uSunDir);
         float sh = computeShadow(shadowCoord, max(N.y, 0.1));
         vec3 V = camVec / max(dist, 0.0001);
         vec3 H = normalize(L + V);
-        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.6);
+        vec3 R = reflect(-V, N);
+        float ndv = max(dot(N, V), 0.0);
+        float fres = 0.04 + 0.96 * pow(1.0 - ndv, 4.2);
         float ndlW = max(dot(N, L), 0.0);
 
-        float shoreWobble = sin(worldPos.x * 0.14) * 2.4 + cos(worldPos.z * 0.15) * 2.2;
+        // Coastal Bathymetry (Main Island + 3 Satellite Islets) & Dual-Grid Voronoi Caustic Network
+        float shoreWobble = sin(worldPos.x * 0.15) * 2.3 + cos(worldPos.z * 0.16) * 2.1;
         float shoreDist = length(worldPos.xz * vec2(1.0, 1.04)) + shoreWobble;
-        float shoreBand = exp(-abs(shoreDist - 39.2) * 0.38) * (0.45 + 0.55 * sin(shoreDist * 1.45 - uTime * 2.8 + wave1 * 1.6));
-        float crestStreak = pow(clamp(0.5 + 0.5 * sin(phA * 0.92 + sin(phB * 0.65) * 0.85), 0.0, 1.0), 7.5);
-        float crestGate = smoothstep(0.18, 0.86, 0.5 + 0.5 * sin(phB * 0.68 + cos(phA * 0.35)));
-        float ridgeFoam = crestStreak * crestGate * 0.55;
-        float foamCrest = clamp(ridgeFoam + wakeRing * 0.68 + shoreBand * 0.52 + shockRing * 0.95, 0.0, 0.96);
+        float satDist = min(
+          length((worldPos.xz - vec2(-64.0, -38.0)) * vec2(0.85, 1.0)),
+          min(length((worldPos.xz - vec2(63.0, -42.0)) * vec2(0.82, 0.96)), length((worldPos.xz - vec2(4.0, -72.0)) * vec2(0.82, 1.0)))
+        );
+        float shallowMask = clamp(exp(-max(shoreDist - 36.5, 0.0) * 0.115) + exp(-max(satDist - 10.5, 0.0) * 0.16) * 0.78, 0.0, 1.0);
 
-        vec3 deepWater = vec3(0.03, 0.24, 0.44);
-        vec3 midWater = vec3(0.08, 0.50, 0.66);
-        vec3 sssWater = vec3(0.14, 0.72, 0.78) * pow(max(dot(V, -L), 0.0), 2.5) * 0.34 * uSunColor;
-        vec3 wCol = mix(deepWater, midWater, clamp(0.45 + 0.42 * swell + wave1 * 0.20, 0.0, 1.0));
-        wCol *= (uAmbientColor * 1.25 + uSunColor * (ndlW * 0.78 * sh + 0.18));
-        wCol += sssWater + mix(uFogHorizon, uFogColor, 0.38) * fres * 0.68;
-        wCol += uSunColor * pow(max(dot(N, H), 0.0), 92.0) * 1.35 * sh;
-        wCol = mix(wCol, vec3(0.86, 0.97, 1.00), foamCrest * uSeaWater);
+        vec2 cUv1 = worldPos.xz * 0.58 + vec2(wave1 * 0.38, wave2 * 0.38) + uTime * vec2(0.42, -0.32);
+        vec2 cUv2 = worldPos.xz * 0.86 - vec2(wave2 * 0.32, wave1 * 0.32) + uTime * vec2(-0.35, 0.46);
+        float cG1 = abs(sin(cUv1.x + sin(cUv1.y * 1.25)) * cos(cUv1.y + cos(cUv1.x * 1.25)));
+        float cG2 = abs(sin(cUv2.x + cos(cUv2.y * 1.35)) * cos(cUv2.y - sin(cUv2.x * 1.35)));
+        float causticNet = pow(clamp(1.0 - min(cG1, cG2) * 1.55, 0.0, 1.0), 2.8);
 
-        float mistRem = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * (1.0 - uSeaWater * 0.92);
-        float distFogW = clamp(1.0 - exp(-pow(max(dist - (88.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.88);
-        outColor = mix(wCol, mix(uFogColor, uFogHorizon, 0.55), clamp(mistRem + distFogW, 0.0, 0.90));
-        outGlow = vec3(0.18, 0.86, 0.96) * clamp(wakeRing * 0.22 + shockRing * 0.65, 0.0, 0.85) + uSunColor * pow(max(dot(N, H), 0.0), 92.0) * 0.28 * sh;
+        // Lacy Cellular Sea-Foam Filigrees & Rhythmic Shoreline Breaking Surf
+        vec2 fUv = worldPos.xz * 1.12 + vec2(wave1 * 0.95, wave2 * 0.95) + uTime * vec2(0.55, -0.45);
+        float foamCell = pow(clamp(1.0 - abs(sin(fUv.x + cos(fUv.y)) * cos(fUv.y - sin(fUv.x))) * 1.35, 0.0, 1.0), 2.4);
+
+        float surfWave1 = 0.5 + 0.5 * sin(shoreDist * 1.65 - uTime * 3.15 + wave1 * 1.55);
+        float surfWave2 = 0.5 + 0.5 * sin(shoreDist * 2.85 - uTime * 4.40 - wave2 * 1.25);
+        float shoreBand = exp(-abs(shoreDist - 39.2) * 0.28) * (pow(surfWave1, 2.2) * 0.72 + surfWave2 * foamCell * 0.48);
+        float satSurf = exp(-abs(satDist - 11.8) * 0.38) * (0.45 + 0.55 * sin(satDist * 1.9 - uTime * 3.2 + wave1));
+
+        float crestStreak = pow(clamp(0.5 + 0.5 * sin(phA * 0.92 + sin(phB * 0.68) * 0.92), 0.0, 1.0), 5.5);
+        float crestGate = smoothstep(0.16, 0.84, 0.5 + 0.5 * sin(phB * 0.72 + cos(phA * 0.38)));
+        float ridgeFoam = crestStreak * crestGate * (0.42 + foamCell * 0.58) * 0.72;
+        float foamCrest = clamp(ridgeFoam + wakeRing * (0.58 + foamCell * 0.42) + (shoreBand + satSurf) * 0.76 + shockRing * 1.15, 0.0, 0.98);
+
+        vec3 abyssalNavy = vec3(0.015, 0.13, 0.29);
+        vec3 pelagicBlue = vec3(0.04, 0.32, 0.52);
+        vec3 shallowTurquoise = vec3(0.07, 0.58, 0.68);
+        vec3 sssWater = vec3(0.14, 0.78, 0.82) * (pow(max(dot(V, -L), 0.0), 2.4) * 0.38 + max(swell + wave1 * 0.5, 0.0) * 0.18) * uSunColor;
+
+        vec3 wCol = mix(abyssalNavy, pelagicBlue, clamp(0.42 + 0.40 * swell + wave1 * 0.22, 0.0, 1.0));
+        wCol = mix(wCol, shallowTurquoise, shallowMask * 0.78);
+        wCol *= (uAmbientColor * 1.25 + uSunColor * (ndlW * 0.82 * sh + 0.18));
+        wCol += vec3(0.24, 0.90, 0.96) * causticNet * (0.16 + shallowMask * 0.52) * (0.35 + 0.65 * sh);
+        wCol += sssWater;
+
+        // Fresnel Sky & Cosmic Reflection + Multi-Lobe Sun/Starlight Diamond Glitter + Point Light Reflections
+        vec3 skyRefl = mix(uFogHorizon * 1.08, uAmbientColor * 1.75 + uSunColor * 0.22, clamp(R.y * 1.65, 0.0, 1.0));
+        wCol = mix(wCol, skyRefl, fres * 0.64);
+
+        float specTight = pow(max(dot(N, H), 0.0), 210.0) * 2.45;
+        float specBroad = pow(max(dot(N, H), 0.0), 38.0) * 0.38;
+        float glitterFacet = smoothstep(0.25, 0.92, capRipple) * pow(max(dot(N, H), 0.0), 72.0) * 0.95;
+        vec3 sunSpec = uSunColor * (specTight + specBroad + glitterFacet) * (0.25 + 0.75 * sh);
+        wCol += sunSpec;
+
+        for (int i = 0; i < 6; i++) {
+          if (i >= uLightCount) break;
+          vec3 lVec = uLightPos[i] - worldPos;
+          float lD2 = dot(lVec, lVec);
+          if (lD2 < uLightRange[i]) {
+            vec3 lDir = lVec * inversesqrt(max(lD2, 0.001));
+            vec3 lH = normalize(lDir + V);
+            float att = pow(1.0 - clamp(lD2 / uLightRange[i], 0.0, 1.0), 2.0);
+            wCol += uLightCol[i] * (max(dot(N, lDir), 0.0) * 0.22 + pow(max(dot(N, lH), 0.0), 42.0) * 0.65) * att;
+          }
+        }
+
+        vec3 foamTint = mix(vec3(0.84, 0.96, 1.00), vec3(0.55, 0.96, 1.00), shockRing * 0.45);
+        wCol = mix(wCol, foamTint, foamCrest);
+
+        float mistRem = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * (1.0 - effWater * 0.93);
+        float distFogW = clamp(1.0 - exp(-pow(max(dist - (92.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.88);
+        vec3 finalWater = mix(wCol, mix(uFogColor, uFogHorizon, 0.55), clamp(mistRem + distFogW, 0.0, 0.90));
+        outColor = mix(abyssCol, finalWater, effWater);
+        outGlow = vec3(0.18, 0.88, 0.98) * clamp(wakeRing * 0.26 + shockRing * 0.82 + causticNet * shallowMask * 0.16, 0.0, 0.92) + sunSpec * 0.26 * effWater;
         return;
       }
 
@@ -1094,12 +1302,13 @@
       vec3 p = aPos;
       if (aStyle > 7.5 && uSeaWater > 0.005) {
         float dXw = length(p.xz - uXuanwuPos);
-        float radWave = clamp((uWaterWaveR - dXw) * 0.085, 0.0, 1.0);
-        float rise = uSeaWater * (0.26 + 0.74 * radWave);
-        float w1 = sin(p.x * 0.24 + uTime * 1.85) * cos(p.z * 0.22 - uTime * 1.45);
-        float w2 = sin((p.x * 0.6 + p.z * 0.8) * 0.32 - uTime * 2.35);
-        float crest = sin(clamp(1.0 - abs(dXw - uWaterWaveR) * 0.12, 0.0, 1.0) * 3.14159);
-        p.y = -13.5 + rise * 5.75 + (w1 * 0.34 + w2 * 0.22) * rise + crest * uSeaSummonFlash * 1.15;
+        float radWave = smoothstep(-7.0, 4.0, uWaterWaveR - dXw);
+        float rise = uSeaWater * radWave;
+        float w1 = sin(p.x * 0.22 + uTime * 1.85) * cos(p.z * 0.20 - uTime * 1.45);
+        float w2 = sin((p.x * 0.62 + p.z * 0.78) * 0.34 - uTime * 2.35);
+        float w3 = sin((p.x * -0.74 + p.z * 0.67) * 0.58 + uTime * 2.95) * 0.45;
+        float crest = exp(-pow((dXw - uWaterWaveR) * 0.16, 2.0)) * smoothstep(2.0, 10.0, uWaterWaveR) * (1.0 - smoothstep(195.0, 235.0, uWaterWaveR));
+        p.y = -13.5 + rise * 5.75 + (w1 * 0.38 + w2 * 0.24 + w3 * 0.18) * rise + crest * 1.65;
       }
       vWorldPos = p; vNormal = aNormal; vUV = aUV;
       vColor = aColor; vAO = aAO; vEmissive = aEmissive; vStyle = aStyle;
@@ -1969,7 +2178,7 @@
 
     // Tessellated Living Ocean & Misty Abyss Floor Surface (animates upward into rolling waves when Xuanwu summons water!)
     (() => {
-      const N_OC = 64, HALF = 160.0, STEP = (HALF * 2) / N_OC, BASE_Y = -13.5;
+      const N_OC = 96, HALF = 160.0, STEP = (HALF * 2) / N_OC, BASE_Y = -13.5;
       const ocCol = [0.34, 0.39, 0.50];
       for (let iz = 0; iz < N_OC; iz++) {
         const z0 = -HALF + iz * STEP, z1 = z0 + STEP;
@@ -2387,10 +2596,14 @@
       else if (st.t > st.dur - 0.7) { st.t = Math.min(st.t, st.dur - 0.95); }
       boltBurstTimer = Math.max(boltBurstTimer, duration);
     }
-    let waterModeActive = location.hash.includes('water');
-    let waterCoverSmooth = waterModeActive ? 1.0 : 0.0;
-    let waterWaveRadius = waterModeActive ? 220.0 : 0.0;
-    let xuanwuBurstTimer = 0.0;
+    const hasInitCharge = location.hash.includes('xuanwu_charge');
+    const hasInitWave = location.hash.includes('xuanwu_wave');
+    let waterModeActive = location.hash.includes('water') || hasInitCharge || hasInitWave;
+    let xuanwuCharging = hasInitCharge;
+    let xuanwuChargeTimer = hasInitCharge ? 0.45 : 0.0;
+    let waterCoverSmooth = (waterModeActive && !hasInitCharge) ? 1.0 : 0.0;
+    let waterWaveRadius = hasInitWave ? 26.0 : ((waterModeActive && !hasInitCharge) ? 240.0 : 0.0);
+    let xuanwuBurstTimer = (hasInitCharge || hasInitWave) ? 2.8 : 0.0;
 
     function syncXuanwuButton() {
       btnXuanwu.className = `pill-btn px-1.5 py-0.5 rounded border font-semibold ${
@@ -2405,9 +2618,14 @@
     function triggerXuanwuWater() {
       waterModeActive = !waterModeActive;
       if (waterModeActive) {
-        waterWaveRadius = 2.5;
-        xuanwuBurstTimer = 2.6;
+        xuanwuCharging = true;
+        xuanwuChargeTimer = 0.0;
+        waterCoverSmooth = 0.0;
+        waterWaveRadius = 0.0;
+        xuanwuBurstTimer = 3.6;
       } else {
+        xuanwuCharging = false;
+        xuanwuChargeTimer = 0.0;
         xuanwuBurstTimer = 1.1;
       }
       syncXuanwuButton();
@@ -3631,7 +3849,7 @@
     }
 
     const XUANWU_CFG = {
-      theta: -0.26, speed: 0.042, swimPhase: 0.0, snakePhase: 0.0, summonBoost: 0.0,
+      theta: -0.26, speed: 0.042, swimPhase: 0.0, snakePhase: 0.0, summonBoost: 0.0, chargePose: 0.0,
       orbitFn: th => {
         const lobe = 4.8 * Math.pow(Math.sin(2.0 * th), 2.0);
         const frontB = 2.5 * Math.max(0, Math.sin(th));
@@ -3648,11 +3866,13 @@
       const flatF = norm3(sub(aheadP, baseP));
       const rawR = norm3(cross([0, 1, 0], flatF));
       const swP = xwCfg.swimPhase, snP = xwCfg.snakePhase;
+      const chargeP = xwCfg.chargePose || 0.0;
       const nightM = currentTimeMode === 'night' ? 1.52 : 1.0;
 
-      const bob = Math.sin(swP * 0.72) * (0.30 + waterStrength * 0.16) + summonRamp * 0.85;
-      const pitch = Math.sin(swP * 0.55) * 0.028 + summonRamp * 0.11;
-      const roll = Math.cos(swP * 0.48) * 0.024;
+      const crouchDip = chargeP > 0.01 ? (Math.sin(chargeP * Math.PI) * 1.35 - Math.max(0, 0.35 - chargeP) * 0.85) : 0.0;
+      const bob = Math.sin(swP * 0.72) * (0.30 + waterStrength * 0.16) * (1.0 - chargeP * 0.7) + crouchDip + summonRamp * 0.55;
+      const pitch = Math.sin(swP * 0.55) * 0.028 * (1.0 - chargeP * 0.7) + chargeP * 0.24 + summonRamp * 0.06;
+      const roll = Math.cos(swP * 0.48) * 0.024 * (1.0 - chargeP * 0.5);
       const cp = Math.cos(pitch), sp = Math.sin(pitch);
       const rawU0 = [0, 1, 0];
       const pFwd = norm3([flatF[0] * cp + rawU0[0] * sp, flatF[1] * cp + rawU0[1] * sp, flatF[2] * cp + rawU0[2] * sp]);
@@ -3664,14 +3884,16 @@
       const shellQ = quatFromFrame(right, up, fwd);
 
       const shellC = [baseP[0], baseP[1] + 2.05 + bob, baseP[2]];
-      const tShellDark = [0.06, 0.09, 0.16];
-      const tShellMid = [0.11, 0.18, 0.29];
-      const tGold = [0.90, 0.68, 0.22];
-      const tRune = [0.14, 0.90, 0.96];
-      const tEye = [0.35, 0.97, 1.00];
-      const tClaw = [0.88, 0.84, 0.66];
-      const emRune = (1.08 + boostIntensity * 0.45 + summonRamp * 0.95 + waterStrength * 0.22) * nightM;
-      const emGold = (0.18 + boostIntensity * 0.20 + summonRamp * 0.25) * nightM;
+      const tShellDark = [0.05, 0.08, 0.15];
+      const tShellMid = [0.10, 0.17, 0.28];
+      const tShellJade = [0.08, 0.28, 0.34];
+      const tGold = [0.92, 0.70, 0.22];
+      const tBronze = [0.72, 0.52, 0.18];
+      const tRune = [0.14, 0.92, 0.98];
+      const tEye = [0.38, 0.98, 1.00];
+      const tClaw = [0.90, 0.86, 0.68];
+      const emRune = (1.12 + boostIntensity * 0.48 + summonRamp * 0.85 + chargeP * 1.95 + waterStrength * 0.25) * nightM;
+      const emGold = (0.20 + boostIntensity * 0.22 + summonRamp * 0.24 + chargeP * 0.65) * nightM;
 
       function xBox(f, r, u, sx, sy, sz, col, em = 0, st = 7.0, q = shellQ) {
         pushBox(
@@ -3686,72 +3908,113 @@
         xBox(0.0, 0, u, w, h, l * 0.72, col, 0, 7.0);
       }
 
-      // Octagonal Plastron & Stepped Chamfered Carapace Dome
-      xBox(0.15, 0, -1.62, 5.2, 0.68, 6.8, tShellDark, 0, 7.0);
-      xBox(0.15, 0, -1.78, 4.0, 0.42, 5.8, tGold, emGold * 0.75, 5.0);
-      octTier(-0.85, 7.6, 8.6, 1.08, tShellDark);
-      octTier( 0.08, 6.6, 7.6, 0.98, tShellMid);
-      octTier( 0.92, 5.0, 6.0, 0.82, tShellDark);
-      octTier( 1.50, 3.4, 4.2, 0.52, tShellMid);
+      // Multi-Plate Bronze-Gold Plastron Bridge & 5-Tier Sculpted Octagonal Carapace Dome
+      xBox(0.15, 0, -1.62, 5.4, 0.70, 7.0, tShellDark, 0, 7.0);
+      xBox(0.15, 0, -1.80, 4.3, 0.44, 6.1, tGold, emGold * 0.80, 5.0);
+      for (const pf of [-2.0, -0.65, 0.65, 2.0]) {
+        xBox(pf, 0, -1.94, 3.6, 0.20, 0.88, tBronze, emGold * 0.5, 5.0);
+      }
+      for (const s of [-1, 1]) {
+        xBox(0.0, s * 3.15, -1.25, 0.68, 0.92, 4.2, tGold, emGold * 0.7, 5.0);
+      }
+      octTier(-0.85, 7.7, 8.7, 1.08, tShellDark);
+      octTier( 0.08, 6.7, 7.7, 0.98, tShellMid);
+      octTier( 0.52, 5.9, 6.9, 0.72, tShellJade);
+      octTier( 0.94, 5.1, 6.1, 0.82, tShellDark);
+      octTier( 1.52, 3.5, 4.3, 0.54, tShellMid);
 
-      // 16 Sawtooth Perimeter Carapace Rim Scutes & Bronze Trim Plates
-      for (let k = 0; k < 16; k++) {
-        const ang = (k / 16) * Math.PI * 2;
+      // Front Nuchal Arch & Rear Pygal Shield + 18 Beveled Perimeter Carapace Rim Scutes
+      xBox(4.38, 0, -0.42, 2.65, 0.52, 1.15, tGold, emGold * 1.05, 5.0);
+      xBox(4.42, 0, -0.32, 2.10, 0.36, 0.82, tRune, emRune * 0.95, 5.0);
+      xBox(-4.35, 0, -0.58, 2.25, 0.46, 0.98, tGold, emGold * 0.95, 5.0);
+      for (let k = 0; k < 18; k++) {
+        const ang = (k / 18) * Math.PI * 2;
         const cf = Math.cos(ang), sf = Math.sin(ang);
-        const rf = cf * 4.35, rr = sf * 3.85;
+        const rf = cf * 4.42, rr = sf * 3.92;
         const outDir = norm3([fwd[0] * cf + right[0] * sf - up[0] * 0.42, fwd[1] * cf + right[1] * sf - up[1] * 0.42, fwd[2] * cf + right[2] * sf - up[2] * 0.42]);
         const rimR = norm3(cross(up, outDir));
         const rimQ = quatFromFrame(rimR, cross(outDir, rimR), outDir);
-        xBox(rf, rr, -1.04, 1.08, 0.42, 1.24, tShellDark, 0, 7.0, rimQ);
-        xBox(rf * 1.04, rr * 1.04, -0.88, 1.14, 0.20, 0.42, tGold, emGold, 5.0, rimQ);
-        if (k % 2 === 0) xBox(rf * 0.96, rr * 0.96, -0.76, 0.40, 0.24, 0.48, tRune, emRune * 0.82, 5.0, rimQ);
+        xBox(rf, rr, -1.04, 1.04, 0.44, 1.28, tShellDark, 0, 7.0, rimQ);
+        xBox(rf * 1.05, rr * 1.05, -0.88, 1.12, 0.22, 0.46, tGold, emGold, 5.0, rimQ);
+        xBox(rf * 0.96, rr * 0.96, -0.75, 0.38, 0.24, 0.50, k % 2 === 0 ? tRune : tGold, k % 2 === 0 ? emRune * 0.88 : emGold * 1.1, 5.0, rimQ);
       }
 
-      // 3 Central Runic Carapace Plates + 6 Lateral Concentric Scutes with Cyan Engraved Glyphs
-      for (const cf of [-1.72, 0.0, 1.72]) {
-        xBox(cf, 0, 1.80, 2.30, 0.20, 1.54, tGold, emGold, 5.0);
-        xBox(cf, 0, 1.88, 1.92, 0.20, 1.24, tShellDark, 0, 7.0);
-        xBox(cf, 0, 1.94, 1.32, 0.18, 0.84, tRune, emRune, 5.0);
-        xBox(cf, 0, 1.98, 0.82, 0.18, 0.50, tShellDark, 0, 7.0);
-        xBox(cf, 0, 2.02, 0.34, 0.18, 0.24, tRune, emRune * 1.1, 5.0);
+      // 5 Vertebral Spinal Keel Scutes + Raised Dorsal Fin Spikes & Bagua Rune Engravings
+      const vertOffsets = [-2.45, -1.22, 0.0, 1.22, 2.45];
+      for (let vi = 0; vi < vertOffsets.length; vi++) {
+        const cf = vertOffsets[vi];
+        const archU = 1.80 - Math.abs(cf) * 0.14;
+        const sc = 1.0 - Math.abs(cf) * 0.08;
+        xBox(cf, 0, archU, 2.28 * sc, 0.22, 1.14 * sc, tGold, emGold, 5.0);
+        xBox(cf, 0, archU + 0.08, 1.90 * sc, 0.20, 0.92 * sc, tShellDark, 0, 7.0);
+        xBox(cf, 0, archU + 0.14, 1.34 * sc, 0.18, 0.64 * sc, tRune, emRune, 5.0);
+        xBox(cf, 0, archU + 0.18, 0.82 * sc, 0.18, 0.38 * sc, tShellDark, 0, 7.0);
+        xBox(cf, 0, archU + 0.34, 0.26, 0.42 * sc, 0.56 * sc, tGold, emGold * 1.25, 5.0);
+        xBox(cf, 0, archU + 0.48, 0.18, 0.26 * sc, 0.34 * sc, tRune, emRune * 1.2, 5.0);
       }
+
+      // 8 Lateral Costal Scute Plates with Gold Studs & Glowing Cyan Bagua Runes
       for (const side of [-1, 1]) {
         const tiltQ = quatFromFrame(norm3([right[0] * 0.82 + up[0] * (0.57 * side), right[1] * 0.82 + up[1] * (0.57 * side), right[2] * 0.82 + up[2] * (0.57 * side)]), norm3([up[0] * 0.82 - right[0] * (0.57 * side), up[1] * 0.82 - right[1] * (0.57 * side), up[2] * 0.82 - right[2] * (0.57 * side)]), fwd);
-        for (const sf of [-1.92, 0.0, 1.92]) {
-          xBox(sf, side * 2.58, 0.62, 0.22, 1.72, 1.62, tGold, emGold, 5.0, tiltQ);
-          xBox(sf, side * 2.64, 0.65, 0.20, 1.38, 1.28, tShellDark, 0, 7.0, tiltQ);
-          xBox(sf, side * 2.70, 0.67, 0.18, 0.88, 0.82, tRune, emRune, 5.0, tiltQ);
-          xBox(sf, side * 2.73, 0.68, 0.16, 0.46, 0.44, tShellDark, 0, 7.0, tiltQ);
+        for (const sf of [-2.15, -0.72, 0.72, 2.15]) {
+          const latScale = 1.0 - Math.abs(sf) * 0.07;
+          xBox(sf, side * 2.58, 0.62, 0.22, 1.68 * latScale, 1.28 * latScale, tGold, emGold, 5.0, tiltQ);
+          xBox(sf, side * 2.64, 0.65, 0.20, 1.36 * latScale, 1.02 * latScale, tShellDark, 0, 7.0, tiltQ);
+          xBox(sf, side * 2.70, 0.67, 0.18, 0.90 * latScale, 0.68 * latScale, tRune, emRune, 5.0, tiltQ);
+          xBox(sf, side * 2.73, 0.68, 0.16, 0.46 * latScale, 0.36 * latScale, tShellDark, 0, 7.0, tiltQ);
+          xBox(sf, side * 2.76, 0.70, 0.16, 0.20 * latScale, 0.18 * latScale, tGold, emGold * 1.3, 5.0, tiltQ);
         }
       }
 
-      // Sculpted Ancient Tortoise Head, Gold Crown Glyph & Glowing Cyan Eyes
-      const hYaw = Math.sin(swP * 0.58) * 0.22;
-      const hPitch = Math.sin(swP * 0.92) * 0.08;
+      // Sculpted Dragon-Tortoise Head: Articulated Roaring Jaw, Swept Gold Horns, Whiskers & Glowing Cyan Eyes
+      const hYaw = Math.sin(swP * 0.58) * 0.20 * (1.0 - chargeP * 0.75);
+      const hPitch = Math.sin(swP * 0.92) * 0.08 * (1.0 - chargeP * 0.5) + chargeP * 0.42;
+      const tortoiseJawOpen = 0.08 + Math.max(0, Math.sin(swP * 0.65)) * 0.14 + chargeP * 0.88;
       const hFwd = norm3([fwd[0] * Math.cos(hYaw) + right[0] * Math.sin(hYaw) + up[0] * hPitch, fwd[1] * Math.cos(hYaw) + right[1] * Math.sin(hYaw) + up[1] * hPitch, fwd[2] * Math.cos(hYaw) + right[2] * Math.sin(hYaw) + up[2] * hPitch]);
       const hRight = norm3(cross(up, hFwd));
       const hUp = cross(hFwd, hRight);
       const hQ = quatFromFrame(hRight, hUp, hFwd);
-      xBox(4.35, 0, -0.76, 2.02, 1.50, 1.56, tShellDark, 0, 7.0);
-      xBox(5.05, hYaw * 0.35, -0.62, 1.92, 1.44, 1.38, tShellMid, 0, 7.0, hQ);
-      const thPos = [shellC[0] + fwd[0] * 5.82 + hFwd[0] * 0.52 - up[0] * 0.42, shellC[1] + fwd[1] * 5.82 + hFwd[1] * 0.52 - up[1] * 0.42, shellC[2] + fwd[2] * 5.82 + hFwd[2] * 0.52 - up[2] * 0.42];
-      function thBox(lf, lr, lu, sx, sy, sz, col, em = 0, st = 7.0) {
-        pushBox(thPos[0] + hFwd[0] * lf + hRight[0] * lr + hUp[0] * lu, thPos[1] + hFwd[1] * lf + hRight[1] * lr + hUp[1] * lu, thPos[2] + hFwd[2] * lf + hRight[2] * lr + hUp[2] * lu, hQ, sx, sy, sz, col, em, st);
+      xBox(4.35, 0, -0.76, 2.08, 1.54, 1.62, tShellDark, 0, 7.0);
+      xBox(4.35, 0, -0.02, 1.42, 0.24, 1.38, tGold, emGold, 5.0);
+      xBox(5.08, hYaw * 0.35, -0.58 + chargeP * 0.28, 1.94, 1.46, 1.44, tShellMid, 0, 7.0, hQ);
+      const thPos = [
+        shellC[0] + fwd[0] * 5.85 + hFwd[0] * 0.56 - up[0] * (0.38 - chargeP * 0.42),
+        shellC[1] + fwd[1] * 5.85 + hFwd[1] * 0.56 - up[1] * (0.38 - chargeP * 0.42),
+        shellC[2] + fwd[2] * 5.85 + hFwd[2] * 0.56 - up[2] * (0.38 - chargeP * 0.42)
+      ];
+      function thBox(lf, lr, lu, sx, sy, sz, col, em = 0, st = 7.0, q = hQ) {
+        pushBox(thPos[0] + hFwd[0] * lf + hRight[0] * lr + hUp[0] * lu, thPos[1] + hFwd[1] * lf + hRight[1] * lr + hUp[1] * lu, thPos[2] + hFwd[2] * lf + hRight[2] * lr + hUp[2] * lu, q, sx, sy, sz, col, em, st);
       }
-      thBox(0.0, 0, 0.16, 2.04, 1.34, 2.28, tShellDark, 0, 7.0);
-      thBox(0.95, 0, 0.08, 1.66, 1.12, 1.24, tShellDark, 0, 7.0);
-      thBox(1.42, 0, -0.14, 1.38, 0.62, 0.62, tShellMid, 0, 7.0);
-      thBox(0.32, 0, 0.88, 1.40, 0.24, 1.52, tGold, emGold * 1.15, 5.0);
-      thBox(0.28, 0, 0.94, 0.88, 0.20, 0.92, tShellDark, 0, 7.0);
-      thBox(0.45, 0, -0.68, 1.60, 0.46, 1.92, tShellMid, 0, 7.0);
+      thBox(0.0, 0, 0.20, 2.12, 1.36, 2.34, tShellDark, 0, 7.0);
+      thBox(0.98, 0, 0.14, 1.72, 1.08, 1.32, tShellDark, 0, 7.0);
+      thBox(1.52, 0, -0.02, 1.38, 0.62, 0.64, tShellMid, 0, 7.0);
+      thBox(1.62, 0, -0.18, 0.92, 0.28, 0.24, tClaw, 0.12, 5.0);
+      thBox(0.32, 0, 0.92, 1.48, 0.26, 1.58, tGold, emGold * 1.25, 5.0);
+      thBox(0.28, 0, 0.98, 0.92, 0.22, 0.96, tShellDark, 0, 7.0);
+      thBox(0.28, 0, 1.04, 0.48, 0.20, 0.52, tRune, emRune * 1.2, 5.0);
+
+      // Articulated Lower Beak Jaw & Glowing Cyan Hydro-Core Maw during Roar
+      const tjFwd = norm3([hFwd[0] - hUp[0] * (0.18 + tortoiseJawOpen * 0.52), hFwd[1] - hUp[1] * (0.18 + tortoiseJawOpen * 0.52), hFwd[2] - hUp[2] * (0.18 + tortoiseJawOpen * 0.52)]);
+      const tjQ = quatFromFrame(hRight, cross(tjFwd, hRight), tjFwd);
+      thBox(0.48, 0, -0.64 - tortoiseJawOpen * 0.46, 1.60, 0.44, 1.88, tShellMid, 0, 7.0, tjQ);
+      thBox(1.36, 0, -0.44 - tortoiseJawOpen * 0.54, 0.94, 0.26, 0.30, tClaw, 0.10, 5.0, tjQ);
+      if (tortoiseJawOpen > 0.22) {
+        thBox(0.68, 0, -0.16 - tortoiseJawOpen * 0.18, 0.58, 0.32, 0.62, tRune, emRune * (1.35 + chargeP * 1.6), 5.0);
+      }
       for (const s of [-1, 1]) {
-        thBox(0.55, 1.04 * s, 0.24, 0.26, 0.40, 0.62, tEye, 2.6 * nightM, 5.0);
-        thBox(-0.35, 1.02 * s, 0.04, 0.22, 0.30, 0.78, tRune, emRune * 0.92, 5.0);
-        thBox(0.25, 0.86 * s, 0.72, 0.48, 0.36, 1.16, tShellMid, 0, 7.0);
-        thBox(-0.35, 0.88 * s, -0.35, 0.42, 0.56, 0.85, tShellDark, 0, 7.0);
+        thBox(1.48, 0.44 * s, -0.22, 0.16, 0.28, 0.16, tClaw, 0.14, 5.0);
+        thBox(0.58, 1.06 * s, 0.26, 0.28, 0.42, 0.66, tEye, (2.6 + chargeP * 1.4) * nightM, 5.0);
+        thBox(-0.35, 1.04 * s, 0.06, 0.24, 0.32, 0.84, tRune, emRune * 0.96, 5.0);
+        thBox(0.25, 0.88 * s, 0.74, 0.52, 0.38, 1.22, tShellMid, 0, 7.0);
+        thBox(-0.35, 0.92 * s, -0.32, 0.46, 0.58, 0.92, tShellDark, 0, 7.0);
+        // Swept-back Golden Dragon-Tortoise Horns & Lateral Cheek Spikes + Flowing Chin Barbels
+        thBox(-0.55, 0.82 * s, 0.96, 0.34, 0.36, 0.95, tGold, emGold * 1.2, 5.0);
+        thBox(-1.12, 0.96 * s, 1.24, 0.26, 0.28, 0.82, tRune, emRune * 1.05, 5.0);
+        thBox(-0.48, 1.18 * s, -0.24, 0.42, 0.26, 0.58, tGold, emGold, 5.0);
+        thBox(0.95, 0.78 * s, -0.68 - tortoiseJawOpen * 0.32, 0.18, 0.56, 0.22, tRune, emRune * 0.95, 5.0, tjQ);
       }
 
-      // 4 Heavy Armored Swimming Flippers with Cyan Runic Forearm Scale Clusters & Hooked Ivory Claws
+      // 4 Heavy Armored Swimming Flippers with Shoulder Pauldrons, Runic Scale Clusters & 5 Hooked Ivory Claws
       const legConfigs = [
         [ 3.05, -2.85,  1, -1, 0.0],
         [ 3.05,  2.85,  1,  1, Math.PI],
@@ -3759,50 +4022,62 @@
         [-2.95,  2.75, -1,  1, 0.25]
       ];
       for (const [lf, lr, fS, rS, phase] of legConfigs) {
-        const stroke = Math.sin(swP + phase), lift = Math.cos(swP + phase);
+        const stroke = Math.sin(swP + phase) * (1.0 - chargeP * 0.65) + chargeP * fS * 0.35;
+        const lift = Math.cos(swP + phase) * (1.0 - chargeP * 0.65) + (fS > 0 ? chargeP * 0.48 : -chargeP * 0.18);
         const shP = [shellC[0] + fwd[0] * lf + right[0] * lr - up[0] * 1.12, shellC[1] + fwd[1] * lf + right[1] * lr - up[1] * 1.12, shellC[2] + fwd[2] * lf + right[2] * lr - up[2] * 1.12];
+        // Armored Shoulder Pauldron
+        xBox(lf + fS * 0.22, lr * 1.08, -0.82, 1.54, 0.86, 1.62, tShellMid, 0, 7.0);
+        xBox(lf + fS * 0.24, lr * 1.16, -0.72, 1.62, 0.32, 1.48, tGold, emGold, 5.0);
+        xBox(lf + fS * 0.26, lr * 1.22, -0.68, 0.68, 0.38, 0.74, tRune, emRune * 0.92, 5.0);
+
         const knP = [
-          shP[0] + fwd[0] * (fS * (1.18 + stroke * 0.75)) + right[0] * (rS * (1.45 - stroke * 0.22)) - up[0] * (0.45 - lift * 0.32),
-          shP[1] + fwd[1] * (fS * (1.18 + stroke * 0.75)) + right[1] * (rS * (1.45 - stroke * 0.22)) - up[1] * (0.45 - lift * 0.32),
-          shP[2] + fwd[2] * (fS * (1.18 + stroke * 0.75)) + right[2] * (rS * (1.45 - stroke * 0.22)) - up[2] * (0.45 - lift * 0.32)
+          shP[0] + fwd[0] * (fS * (1.18 + stroke * 0.75)) + right[0] * (rS * (1.48 - stroke * 0.22 + chargeP * 0.28)) - up[0] * (0.45 - lift * 0.32),
+          shP[1] + fwd[1] * (fS * (1.18 + stroke * 0.75)) + right[1] * (rS * (1.48 - stroke * 0.22 + chargeP * 0.28)) - up[1] * (0.45 - lift * 0.32),
+          shP[2] + fwd[2] * (fS * (1.18 + stroke * 0.75)) + right[2] * (rS * (1.48 - stroke * 0.22 + chargeP * 0.28)) - up[2] * (0.45 - lift * 0.32)
         ];
         const ftP = [
-          knP[0] + fwd[0] * (0.82 * fS + stroke * 0.45) + right[0] * (rS * 0.52) - up[0] * (1.12 - Math.max(0, lift) * 0.38),
-          knP[1] + fwd[1] * (0.82 * fS + stroke * 0.45) + right[1] * (rS * 0.52) - up[1] * (1.12 - Math.max(0, lift) * 0.38),
-          knP[2] + fwd[2] * (0.82 * fS + stroke * 0.45) + right[2] * (rS * 0.52) - up[2] * (1.12 - Math.max(0, lift) * 0.38)
+          knP[0] + fwd[0] * (0.84 * fS + stroke * 0.45) + right[0] * (rS * 0.56) - up[0] * (1.14 - Math.max(0, lift) * 0.38),
+          knP[1] + fwd[1] * (0.84 * fS + stroke * 0.45) + right[1] * (rS * 0.56) - up[1] * (1.14 - Math.max(0, lift) * 0.38),
+          knP[2] + fwd[2] * (0.84 * fS + stroke * 0.45) + right[2] * (rS * 0.56) - up[2] * (1.14 - Math.max(0, lift) * 0.38)
         ];
         const uD = sub(knP, shP), uM = mix3(shP, knP, 0.5);
         const fD = sub(ftP, knP), fM = mix3(knP, ftP, 0.5);
         const legQ = quatFromBasis(uD, 0);
         const shinQ = quatFromBasis(fD, 0);
-        pushBox(uM[0], uM[1], uM[2], legQ, 1.38, 1.32, Math.hypot(...uD) * 1.15, tShellDark, 0, 7.0);
-        pushBox(fM[0], fM[1], fM[2], shinQ, 1.34, 1.24, Math.hypot(...fD) * 1.18, tShellDark, 0, 7.0);
-        for (const scFrac of [0.28, 0.54, 0.78]) {
+        pushBox(uM[0], uM[1], uM[2], legQ, 1.44, 1.36, Math.hypot(...uD) * 1.16, tShellDark, 0, 7.0);
+        pushBox(fM[0], fM[1], fM[2], shinQ, 1.38, 1.28, Math.hypot(...fD) * 1.18, tShellDark, 0, 7.0);
+        for (const scFrac of [0.22, 0.44, 0.66, 0.86]) {
           const spPos = mix3(knP, ftP, scFrac);
-          pushBox(spPos[0] + right[0] * (rS * 0.54) + fwd[0] * (fS * 0.24), spPos[1] + right[1] * (rS * 0.54) + 0.14, spPos[2] + right[2] * (rS * 0.54) + fwd[2] * (fS * 0.24), shinQ, 0.38, 0.36, 0.42, tRune, emRune * 0.96, 5.0);
+          pushBox(spPos[0] + right[0] * (rS * 0.56) + fwd[0] * (fS * 0.24), spPos[1] + right[1] * (rS * 0.56) + 0.14, spPos[2] + right[2] * (rS * 0.56) + fwd[2] * (fS * 0.24), shinQ, 0.40, 0.38, 0.44, scFrac === 0.44 ? tGold : tRune, scFrac === 0.44 ? emGold * 1.2 : emRune * 0.98, 5.0);
         }
         const padFwd = norm3([fwd[0] * 0.85 + right[0] * (rS * 0.45), fwd[1], fwd[2] * 0.85 + right[2] * (rS * 0.45)]);
         const padR = norm3(cross(up, padFwd));
         const padQ = quatFromFrame(padR, cross(padFwd, padR), padFwd);
-        pushBox(ftP[0], ftP[1], ftP[2], padQ, 1.56, 0.72, 1.52, tShellDark, 0, 7.0);
-        for (const cOff of [-0.52, -0.17, 0.17, 0.52]) {
-          pushBox(ftP[0] + padFwd[0] * 0.95 + padR[0] * cOff, ftP[1] - 0.10, ftP[2] + padFwd[2] * 0.95 + padR[2] * cOff, padQ, 0.24, 0.28, 0.62, tClaw, 0.08, 5.0);
-          pushBox(ftP[0] + padFwd[0] * 1.26 + padR[0] * cOff, ftP[1] - 0.28, ftP[2] + padFwd[2] * 1.26 + padR[2] * cOff, padQ, 0.18, 0.26, 0.24, tClaw, 0.10, 5.0);
+        pushBox(ftP[0], ftP[1], ftP[2], padQ, 1.68, 0.74, 1.58, tShellDark, 0, 7.0);
+        pushBox(ftP[0], ftP[1] + 0.26, ftP[2], padQ, 1.38, 0.24, 1.22, tGold, emGold * 0.85, 5.0);
+        for (const cOff of [-0.60, -0.30, 0.0, 0.30, 0.60]) {
+          pushBox(ftP[0] + padFwd[0] * 0.96 + padR[0] * cOff, ftP[1] - 0.10, ftP[2] + padFwd[2] * 0.96 + padR[2] * cOff, padQ, 0.22, 0.28, 0.66, tClaw, 0.08, 5.0);
+          pushBox(ftP[0] + padFwd[0] * 1.28 + padR[0] * cOff, ftP[1] - 0.28, ftP[2] + padFwd[2] * 1.28 + padR[2] * cOff, padQ, 0.17, 0.26, 0.26, tClaw, 0.10, 5.0);
         }
       }
 
-      // Spiked Tortoise Tail
-      for (let t = 0; t < 4; t++) {
-        const ts = Math.sin(swP * 0.95 - t * 0.55) * (0.28 + t * 0.16);
-        const sc = 1.0 - t * 0.18;
-        xBox(-4.25 - t * 0.70, ts, -1.14 - t * 0.12, 0.95 * sc, 0.72 * sc, 0.92, tShellDark, 0, 7.0);
-        if (t % 2 === 0) xBox(-4.25 - t * 0.70, ts + 0.18, -0.74 - t * 0.12, 0.28, 0.30, 0.34, tGold, emGold, 5.0);
+      // 6-Segment Spiked Armored Tortoise Tail with Glowing Cyan Tail-Mace
+      for (let t = 0; t < 6; t++) {
+        const ts = Math.sin(swP * 0.95 - t * 0.52) * (0.26 + t * 0.15);
+        const sc = 1.0 - t * 0.13;
+        const tf = -4.25 - t * 0.64;
+        const tu = -1.12 - t * 0.09 + chargeP * t * 0.08;
+        xBox(tf, ts, tu, 0.98 * sc, 0.74 * sc, 0.88, tShellDark, 0, 7.0);
+        xBox(tf, ts, tu + 0.42 * sc, 0.26 * sc, 0.34 * sc, 0.36, t % 2 === 0 ? tGold : tRune, t % 2 === 0 ? emGold * 1.1 : emRune * 0.95, 5.0);
+        if (t === 5) {
+          xBox(tf - 0.38, ts, tu + 0.06, 0.64, 0.56, 0.72, tRune, emRune * 1.25, 5.0);
+        }
       }
 
-      // Snugly Hugging Jade-Gold Coiled Guardian Serpent + Towering S-Neck & Fanged Viper Head
-      const sJade = [0.14, 0.68, 0.42], sTeal = [0.08, 0.54, 0.56], sGold = [0.94, 0.78, 0.24];
-      const sBelly = [0.84, 0.88, 0.64], sEye = [1.00, 0.46, 0.08], sMouth = [0.82, 0.14, 0.18];
-      const N_S = 44;
+      // 52-Segment Dorsal-Crested Jade-Gold Coiled Guardian Serpent + Flared Cobra Hood & Fanged Viper Head
+      const sJade = [0.14, 0.70, 0.42], sTeal = [0.08, 0.55, 0.58], sGold = [0.95, 0.79, 0.24];
+      const sBelly = [0.85, 0.89, 0.65], sEye = [1.00, 0.42, 0.06], sMouth = [0.84, 0.14, 0.18];
+      const N_S = 52;
       const sPts = new Array(N_S);
       const sCtrl = [
         [-3.95, -2.05, -0.75],
@@ -3813,8 +4088,8 @@
         [-0.55,  4.05, -0.55],
         [-2.95,  2.65,  1.55],
         [-3.25,  0.25,  3.25],
-        [-1.35, -0.35,  5.15],
-        [ 1.55,  0.05,  6.25]
+        [-1.35, -0.35,  5.25 + chargeP * 1.35],
+        [ 1.65 + chargeP * 0.65,  0.05,  6.35 + chargeP * 2.10]
       ];
       function sampleSerpentLocal(u) {
         const scaled = clamp(u, 0, 1) * (sCtrl.length - 1);
@@ -3832,9 +4107,9 @@
         const u = i / (N_S - 1);
         const [lf, lr, lu] = sampleSerpentLocal(u);
         const coilPulse = Math.sin(snP * 1.85 - u * 12.0);
-        const neckW = smoothstep(0.66, 0.96, u);
-        const swayR = neckW * Math.sin(snP * 1.15) * 0.84 + (1.0 - neckW) * coilPulse * 0.06;
-        const lungeF = neckW * Math.cos(snP * 2.1) * 0.36;
+        const neckW = smoothstep(0.64, 0.96, u);
+        const swayR = neckW * Math.sin(snP * 1.15) * (0.84 + chargeP * 0.35) + (1.0 - neckW) * coilPulse * 0.06;
+        const lungeF = neckW * (Math.cos(snP * 2.1) * 0.36 + chargeP * 0.65);
         const fC = lf + lungeF, rC = lr + swayR, uC = lu + coilPulse * (0.05 + neckW * 0.20);
         sPts[i] = [
           shellC[0] + fwd[0] * fC + right[0] * rC + up[0] * uC,
@@ -3846,65 +4121,115 @@
       for (let i = 0; i < N_S - 1; i++) {
         const u = i / (N_S - 1);
         const p0 = sPts[i], p1 = sPts[i + 1];
-        const segD = sub(p1, p0), segLen = Math.hypot(segD[0], segD[1], segD[2]) || 0.18;
+        const segD = sub(p1, p0), segLen = Math.hypot(segD[0], segD[1], segD[2]) || 0.16;
         const tang = norm3(segD);
         const rawCross = cross(up, tang);
         const sR = Math.hypot(rawCross[0], rawCross[1], rawCross[2]) > 0.12 ? norm3(rawCross) : right;
         const sU = norm3(cross(tang, sR));
         const sq = quatFromFrame(sR, sU, tang);
         const tailTaper = smoothstep(0.0, 0.14, u);
-        const rad = (0.14 + 0.56 * Math.sin(Math.pow(u, 0.68) * Math.PI * 0.88)) * mix(0.55, 1.0, tailTaper);
+        const rad = (0.14 + 0.58 * Math.sin(Math.pow(u, 0.68) * Math.PI * 0.88)) * mix(0.55, 1.0, tailTaper);
         const colMain = i % 2 === 0 ? sJade : sTeal;
         const mPos = mix3(p0, p1, 0.5);
-        pushBox(mPos[0], mPos[1], mPos[2], sq, rad * 1.46, rad * 1.40, segLen * 1.24, colMain, 0.06, 7.0);
-        pushBox(mPos[0] - sU[0] * rad * 0.48, mPos[1] - sU[1] * rad * 0.48, mPos[2] - sU[2] * rad * 0.48, sq, rad * 1.10, rad * 0.54, segLen * 1.16, sBelly, 0.05, 7.0);
-        const goldSide = (i % 2 === 0 ? 1 : -1) * rad * 0.66;
-        pushBox(mPos[0] + sR[0] * goldSide + sU[0] * rad * 0.22, mPos[1] + sR[1] * goldSide + sU[1] * rad * 0.22, mPos[2] + sR[2] * goldSide + sU[2] * rad * 0.22, sq, rad * 0.34, rad * 0.58, segLen * 0.88, sGold, emGold * 1.1, 5.0);
+        pushBox(mPos[0], mPos[1], mPos[2], sq, rad * 1.48, rad * 1.42, segLen * 1.26, colMain, 0.06, 7.0);
+        pushBox(mPos[0] - sU[0] * rad * 0.50, mPos[1] - sU[1] * rad * 0.50, mPos[2] - sU[2] * rad * 0.50, sq, rad * 1.12, rad * 0.54, segLen * 1.18, sBelly, 0.05, 7.0);
+        // Dorsal Diamond Scale Spine Ridge & Lateral Gold/Rune Chevrons
+        const isRuneSeg = (i % 4 === 0);
+        pushBox(mPos[0] + sU[0] * rad * 0.72, mPos[1] + sU[1] * rad * 0.72, mPos[2] + sU[2] * rad * 0.72, sq, rad * 0.34, rad * 0.38, segLen * 0.92, isRuneSeg ? tRune : sGold, isRuneSeg ? emRune * 0.85 : emGold * 1.15, 5.0);
+        const goldSide = (i % 2 === 0 ? 1 : -1) * rad * 0.68;
+        pushBox(mPos[0] + sR[0] * goldSide + sU[0] * rad * 0.20, mPos[1] + sR[1] * goldSide + sU[1] * rad * 0.20, mPos[2] + sR[2] * goldSide + sU[2] * rad * 0.20, sq, rad * 0.34, rad * 0.60, segLen * 0.90, sGold, emGold * 1.1, 5.0);
+        // Flared Cobra-Dragon Upper Neck Hood Ribs (near head i >= N_S - 7)
+        if (i >= N_S - 7) {
+          const hoodFrac = Math.sin(((i - (N_S - 7)) / 6.0) * Math.PI);
+          const hoodW = rad * (1.85 + hoodFrac * (1.45 + chargeP * 0.85));
+          pushBox(mPos[0], mPos[1], mPos[2], sq, hoodW, rad * 0.42, segLen * 1.15, sJade, 0.08, 7.0);
+          pushBox(mPos[0], mPos[1] + sU[1] * 0.06, mPos[2], sq, hoodW * 1.06, rad * 0.22, segLen * 0.72, sGold, emGold * 1.25, 5.0);
+        }
       }
 
-      // Serpent Viper Head, Raised Brow Plates, Amber Eyes & Fanged Open Hiss + Forked Tongue
+      // Serpent Viper Head: Crown Horns, Flared Temple Shields, Amber Eyes, 4 Fangs & Forked Tongue
       const shEnd = sPts[N_S - 1], shPrev = sPts[N_S - 2];
       const skBaseFwd = norm3(sub(shEnd, shPrev));
-      const skTargetF = norm3([fwd[0] * 0.82 + right[0] * Math.sin(snP * 0.95) * 0.38 - up[0] * 0.14, fwd[1] * 0.82 + right[1] * Math.sin(snP * 0.95) * 0.38 - up[1] * 0.14, fwd[2] * 0.82 + right[2] * Math.sin(snP * 0.95) * 0.38 - up[2] * 0.14]);
+      const skTargetF = norm3([
+        fwd[0] * 0.82 + right[0] * Math.sin(snP * 0.95) * 0.38 + up[0] * (-0.12 + chargeP * 0.44),
+        fwd[1] * 0.82 + right[1] * Math.sin(snP * 0.95) * 0.38 + up[1] * (-0.12 + chargeP * 0.44),
+        fwd[2] * 0.82 + right[2] * Math.sin(snP * 0.95) * 0.38 + up[2] * (-0.12 + chargeP * 0.44)
+      ]);
       const skFwd = norm3(mix3(skBaseFwd, skTargetF, 0.62));
       const skRight = norm3(cross(up, skFwd)), skUp = cross(skFwd, skRight);
       const skQ = quatFromFrame(skRight, skUp, skFwd);
-      const hissOpen = 0.26 + Math.pow(Math.max(0, Math.sin(snP * 0.85)), 3.0) * 0.65;
+      const hissOpen = clamp(0.28 + Math.pow(Math.max(0, Math.sin(snP * 0.85)), 3.0) * 0.65 + chargeP * 0.75, 0.25, 1.05);
       function sHBox(lf, lr, lu, sx, sy, sz, col, em = 0, st = 7.0, q = skQ) {
         pushBox(shEnd[0] + skFwd[0] * lf + skRight[0] * lr + skUp[0] * lu, shEnd[1] + skFwd[1] * lf + skRight[1] * lr + skUp[1] * lu, shEnd[2] + skFwd[2] * lf + skRight[2] * lr + skUp[2] * lu, q, sx, sy, sz, col, em, st);
       }
-      sHBox(0.35, 0, 0.18, 1.48, 0.72, 1.56, sJade, 0.08);
-      sHBox(0.95, 0, 0.16, 1.12, 0.56, 0.98, sTeal, 0.08);
-      sHBox(0.55, 0, 0.52, 0.82, 0.24, 1.05, sGold, emGold * 1.2, 5.0);
+      sHBox(0.35, 0, 0.18, 1.56, 0.76, 1.62, sJade, 0.08);
+      sHBox(0.98, 0, 0.16, 1.16, 0.58, 1.04, sTeal, 0.08);
+      sHBox(0.55, 0, 0.54, 0.88, 0.26, 1.12, sGold, emGold * 1.25, 5.0);
+      sHBox(0.52, 0, 0.64, 0.42, 0.22, 0.68, tRune, emRune * 1.15, 5.0);
       const sjFwd = norm3([skFwd[0] - skUp[0] * (0.28 + hissOpen * 0.52), skFwd[1] - skUp[1] * (0.28 + hissOpen * 0.52), skFwd[2] - skUp[2] * (0.28 + hissOpen * 0.52)]);
       const sjQ = quatFromFrame(skRight, cross(sjFwd, skRight), sjFwd);
-      sHBox(0.65, 0, -0.32 - hissOpen * 0.38, 1.04, 0.34, 1.32, sTeal, 0.06, 7.0, sjQ);
-      sHBox(0.75, 0, -0.18 - hissOpen * 0.16, 0.68, 0.22, 0.86, sMouth, 0.24, 5.0, sjQ);
-      sHBox(1.42, 0, -0.22 - hissOpen * 0.22, 0.20, 0.12, 0.65, [0.96, 0.18, 0.28], 0.32, 5.0, sjQ);
+      sHBox(0.65, 0, -0.32 - hissOpen * 0.38, 1.08, 0.36, 1.36, sTeal, 0.06, 7.0, sjQ);
+      sHBox(0.75, 0, -0.18 - hissOpen * 0.16, 0.72, 0.24, 0.90, sMouth, 0.24, 5.0, sjQ);
+      sHBox(1.36, 0, -0.22 - hissOpen * 0.22, 0.18, 0.12, 0.58, [0.96, 0.16, 0.28], 0.36, 5.0, sjQ);
       for (const s of [-1, 1]) {
-        sHBox(0.62, 0.64 * s, 0.44, 0.34, 0.28, 0.72, sTeal, 0.08);
-        sHBox(0.68, 0.66 * s, 0.22, 0.20, 0.26, 0.36, sEye, 2.6 * nightM, 5.0);
-        sHBox(1.22, 0.32 * s, -0.16, 0.14, 0.38, 0.14, [0.99, 0.98, 0.94], 0.18, 5.0);
+        sHBox(0.62, 0.66 * s, 0.46, 0.36, 0.30, 0.76, sTeal, 0.08);
+        sHBox(0.68, 0.68 * s, 0.22, 0.22, 0.28, 0.40, sEye, (2.7 + chargeP * 1.3) * nightM, 5.0);
+        // Swept-back Golden Serpent Crown Horns & 4 Curved White Fangs + Forked Tongue Tips
+        sHBox(-0.18, 0.52 * s, 0.68, 0.22, 0.26, 0.78, sGold, emGold * 1.3, 5.0);
+        sHBox(-0.56, 0.64 * s, 0.90, 0.16, 0.20, 0.52, tRune, emRune * 1.1, 5.0);
+        sHBox(1.24, 0.34 * s, -0.16, 0.14, 0.42, 0.14, [0.99, 0.98, 0.94], 0.22, 5.0);
+        sHBox(0.92, 0.28 * s, -0.14, 0.11, 0.28, 0.11, [0.99, 0.98, 0.94], 0.18, 5.0);
+        sHBox(1.72, 0.16 * s, -0.24 - hissOpen * 0.24, 0.10, 0.10, 0.36, [0.98, 0.14, 0.26], 0.42, 5.0, sjQ);
+      }
+
+      // 1-Second Charge-Up Roar VFX: Rotating Octagonal Bagua Rune Halo + Inward-Spiraling Hydro-Orbs & Geyser Pillars
+      if (chargeP > 0.01) {
+        for (let b = 0; b < 16; b++) {
+          const bAng = (b / 16) * Math.PI * 2 + time * 3.6;
+          const bRad = 6.2 + Math.sin(time * 8.0 + b) * 0.35;
+          const bx = shellC[0] + Math.cos(bAng) * bRad;
+          const bz = shellC[2] + Math.sin(bAng) * bRad;
+          const by = baseP[1] + 0.65 + Math.sin(bAng * 4.0 + time * 5.0) * 0.25;
+          const bTang = [-Math.sin(bAng), 0, Math.cos(bAng)];
+          const bQ = quatFromBasis(bTang, 0);
+          pushBox(bx, by, bz, bQ, 0.36, 0.24, 1.18, b % 2 === 0 ? tRune : tGold, (1.8 + chargeP * 1.6) * nightM, 5.0);
+        }
+        for (let o = 0; o < 24; o++) {
+          const cyc = 1.0 - ((time * 2.4 + o / 24) % 1.0);
+          const oAng = (o / 24) * Math.PI * 2 + (1.0 - cyc) * 4.2 + time * 2.8;
+          const oRad = 2.2 + cyc * 12.5;
+          const ox = shellC[0] + Math.cos(oAng) * oRad;
+          const oz = shellC[2] + Math.sin(oAng) * oRad;
+          const oy = baseP[1] + 0.4 + (1.0 - cyc) * 5.6 + Math.sin(o * 2.1 + time * 6.0) * 0.45;
+          const oSz = (0.32 + (1.0 - cyc) * 0.36) * (0.6 + chargeP * 0.6);
+          pushBox(ox, oy, oz, ID_Q, oSz, oSz, oSz, o % 3 === 0 ? tGold : tRune, (1.9 + chargeP * 1.5) * nightM, 5.0);
+        }
+        for (let g = 0; g < 8; g++) {
+          const gAng = (g / 8) * Math.PI * 2 - time * 1.8;
+          const gRad = 4.8 + Math.sin(g * 1.7) * 0.6;
+          const gh = (1.4 + Math.sin(time * 9.0 + g * 1.3) * 0.6) * chargeP * 3.2;
+          pushWxBox(shellC[0] + Math.cos(gAng) * gRad, baseP[1] + gh * 0.5, shellC[2] + Math.sin(gAng) * gRad, ID_Q, 0.85, gh, 0.85, [0.32, 0.94, 1.00], 0.48 * chargeP * nightM, 3.0);
+        }
       }
 
       // Swirling Mist Ripples & Animated Ocean Spray Wake around Tortoise Hull
-      for (let w = 0; w < 8; w++) {
-        const wf = ((time * (0.45 + waterStrength * 0.35) + w / 8) % 1.0);
-        const wBack = -1.5 - wf * 8.2;
-        const wLat = (w % 2 === 0 ? 1 : -1) * (2.6 + wf * 4.2 + Math.sin(time * 2.0 + w) * 0.5);
-        const wScale = (1.8 + wf * 3.4) * (1.0 + waterStrength * 0.25);
-        const wakeCol = waterStrength > 0.3 ? [0.68, 0.95, 1.00] : [0.46, 0.88, 0.96];
-        pushWxBox(shellC[0] + fwd[0] * wBack + right[0] * wLat, baseP[1] + 0.15 + wf * 0.6, shellC[2] + fwd[2] * wBack + right[2] * wLat, ID_Q, wScale, 0.48, wScale, wakeCol, (0.14 + waterStrength * 0.14) * (1 - wf) * nightM, 3.0);
+      for (let w = 0; w < 10; w++) {
+        const wf = ((time * (0.45 + waterStrength * 0.35) + w / 10) % 1.0);
+        const wBack = -1.5 - wf * 8.8;
+        const wLat = (w % 2 === 0 ? 1 : -1) * (2.6 + wf * 4.5 + Math.sin(time * 2.0 + w) * 0.5);
+        const wScale = (1.8 + wf * 3.5) * (1.0 + waterStrength * 0.28);
+        const wakeCol = waterStrength > 0.3 ? [0.72, 0.96, 1.00] : [0.46, 0.88, 0.96];
+        pushWxBox(shellC[0] + fwd[0] * wBack + right[0] * wLat, baseP[1] + 0.15 + wf * 0.6, shellC[2] + fwd[2] * wBack + right[2] * wLat, ID_Q, wScale, 0.48, wScale, wakeCol, (0.15 + waterStrength * 0.16) * (1 - wf) * nightM, 3.0);
       }
       if (waterStrength > 0.05 || summonRamp > 0.05) {
         const sprayAmt = Math.max(waterStrength * 0.55, summonRamp);
-        for (let sp = 0; sp < 14; sp++) {
-          const ph = ((time * (1.45 + summonRamp * 1.1) + sp / 14) % 1.0);
-          const ang = (sp / 14) * Math.PI * 2 + swP * 0.4;
-          const distR = 4.6 + ph * (3.8 + summonRamp * 5.2);
-          const arcY = -0.35 + Math.sin(ph * Math.PI) * (1.8 + summonRamp * 3.4);
+        for (let sp = 0; sp < 16; sp++) {
+          const ph = ((time * (1.45 + summonRamp * 1.1) + sp / 16) % 1.0);
+          const ang = (sp / 16) * Math.PI * 2 + swP * 0.4;
+          const distR = 4.6 + ph * (4.0 + summonRamp * 5.6);
+          const arcY = -0.35 + Math.sin(ph * Math.PI) * (1.9 + summonRamp * 3.6);
           const sz = (0.34 + 0.22 * (1 - ph)) * (0.7 + sprayAmt * 0.6);
-          pushBox(shellC[0] + Math.cos(ang) * distR, baseP[1] + arcY, shellC[2] + Math.sin(ang) * distR, ID_Q, sz, sz, sz, ph < 0.4 ? [0.82, 0.98, 1.0] : [0.32, 0.86, 0.96], (0.55 + summonRamp * 1.2) * (1 - ph) * nightM, 5.0);
+          pushBox(shellC[0] + Math.cos(ang) * distR, baseP[1] + arcY, shellC[2] + Math.sin(ang) * distR, ID_Q, sz, sz, sz, ph < 0.4 ? [0.85, 0.98, 1.0] : [0.32, 0.88, 0.98], (0.60 + summonRamp * 1.25) * (1 - ph) * nightM, 5.0);
         }
       }
       return { shellC, baseP, fwd, right, up, serpentHead: shEnd };
@@ -4079,16 +4404,17 @@
         fog = mix3(fog, [0.58, 0.64, 0.73], 0.75); fogHorizon = [0.72, 0.76, 0.82]; sunVis = 0.4; starAmt *= 0.2;
       }
       if (crimsonSky > 0.005) {
-        skyTop = mix3(skyTop, [0.14, 0.008, 0.012], crimsonSky * 0.94);
-        skyMid = mix3(skyMid, [0.46, 0.022, 0.016], crimsonSky * 0.96);
-        skyHorizon = mix3(skyHorizon, [0.78, 0.075, 0.022], crimsonSky * 0.96);
-        sunColor = mix3(sunColor, [1.45, 0.14, 0.035], crimsonSky * 0.92);
-        ambient = mix3(ambient, [0.42, 0.08, 0.06], crimsonSky * 0.78);
-        fog = mix3(fog, [0.42, 0.05, 0.03], crimsonSky * 0.88);
-        fogHorizon = mix3(fogHorizon, [0.78, 0.11, 0.035], crimsonSky * 0.92);
-        cloudCol = mix3(cloudCol, [0.92, 0.24, 0.12], crimsonSky * 0.85);
-        starAmt *= (1.0 - crimsonSky * 0.85);
-        torchMult *= (1.0 + crimsonSky * 0.45);
+        skyTop = mix3(skyTop, [0.008, 0.010, 0.042], crimsonSky * 0.97);
+        skyMid = mix3(skyMid, [0.022, 0.032, 0.105], crimsonSky * 0.96);
+        skyHorizon = mix3(skyHorizon, [0.065, 0.115, 0.255], crimsonSky * 0.95);
+        sunColor = mix3(sunColor, [0.64, 0.80, 1.18], crimsonSky * 0.90);
+        ambient = mix3(ambient, [0.22, 0.27, 0.45], crimsonSky * 0.82);
+        fog = mix3(fog, [0.042, 0.068, 0.18], crimsonSky * 0.92);
+        fogHorizon = mix3(fogHorizon, [0.10, 0.16, 0.36], crimsonSky * 0.92);
+        cloudCol = mix3(cloudCol, [0.28, 0.38, 0.68], crimsonSky * 0.85);
+        starAmt = mix(starAmt, 1.45, crimsonSky * 0.96);
+        sunVis *= (1.0 - crimsonSky * 0.94);
+        torchMult *= (1.0 + crimsonSky * 0.52);
       }
 
       if (playing) {
@@ -4141,14 +4467,32 @@
 
       if (playing) {
         if (xuanwuBurstTimer > 0) xuanwuBurstTimer = Math.max(0, xuanwuBurstTimer - dt);
-        const wTarget = waterModeActive ? 1.0 : 0.0;
-        waterCoverSmooth += (wTarget - waterCoverSmooth) * Math.min(1, dt * 1.9);
-        if (waterModeActive) waterWaveRadius = Math.min(230.0, waterWaveRadius + dt * 92.0);
-        const xwSumBoost = xuanwuBurstTimer > 0 ? Math.sin(Math.min(1, xuanwuBurstTimer / 2.2) * Math.PI) : 0;
+        if (xuanwuCharging) {
+          xuanwuChargeTimer += dt;
+          const cProg = clamp(xuanwuChargeTimer / 1.05, 0.0, 1.0);
+          XUANWU_CFG.chargePose = Math.sin(cProg * Math.PI * 0.86);
+          waterCoverSmooth = Math.max(0.0, waterCoverSmooth - dt * 3.0);
+          waterWaveRadius = 0.0;
+          shakeMag = Math.max(shakeMag, cProg * 0.36);
+          if (xuanwuChargeTimer >= 1.05) {
+            xuanwuCharging = false;
+            XUANWU_CFG.chargePose = 0.0;
+            waterCoverSmooth = 0.22;
+            waterWaveRadius = 5.5;
+            shakeMag = Math.max(shakeMag, 0.82);
+          }
+        } else {
+          XUANWU_CFG.chargePose = Math.max(0.0, (XUANWU_CFG.chargePose || 0.0) - dt * 4.5);
+          const wTarget = waterModeActive ? 1.0 : 0.0;
+          waterCoverSmooth += (wTarget - waterCoverSmooth) * Math.min(1, dt * (waterModeActive ? 3.2 : 1.9));
+          if (waterModeActive) waterWaveRadius = Math.min(240.0, waterWaveRadius + dt * 110.0);
+        }
+        const xwSumBoost = xuanwuBurstTimer > 0 ? Math.sin(Math.min(1, xuanwuBurstTimer / 2.4) * Math.PI) : 0;
         XUANWU_CFG.summonBoost = xwSumBoost;
-        XUANWU_CFG.theta += XUANWU_CFG.speed * (1.0 + boostRamp * 0.85 + xwSumBoost * 0.45) * dt;
+        const moveScale = xuanwuCharging ? 0.10 : (1.0 + boostRamp * 0.85 + xwSumBoost * 0.45);
+        XUANWU_CFG.theta += XUANWU_CFG.speed * moveScale * dt;
         XUANWU_CFG.swimPhase += dt * (1.75 + boostRamp * 0.95 + xwSumBoost * 1.65);
-        XUANWU_CFG.snakePhase += dt * (1.35 + boostRamp * 0.85 + xwSumBoost * 1.85);
+        XUANWU_CFG.snakePhase += dt * (1.35 + boostRamp * 0.85 + xwSumBoost * 2.15 + (XUANWU_CFG.chargePose || 0) * 1.6);
         const pairList = [
           [DRAGON_CONFIGS.green, poseGreen.active ? poseGreen.swimBoost : 0],
           [DRAGON_CONFIGS.white, poseWhite.active ? poseWhite.swimBoost : 0],
@@ -4390,11 +4734,13 @@
           const xR = norm3(cross([0, 1, 0], xF));
           const rlX = Math.hypot(xBase[0], xBase[2]) || 1;
           const outRad = [xBase[0] / rlX, 0, xBase[2] / rlX];
-          desiredTarget = [xBase[0], xBase[1] + 3.4, xBase[2]];
+          const xwCh = XUANWU_CFG.chargePose || 0;
+          const distMult = followZoomScale * (1.0 + xwCh * 0.20);
+          desiredTarget = [xBase[0], xBase[1] + 3.4 + xwCh * 1.45, xBase[2]];
           desiredEye = [
-            xBase[0] + xF[0] * 13.5 * followZoomScale + outRad[0] * 15.8 * followZoomScale,
-            xBase[1] + 8.6 * (0.75 + 0.25 * followZoomScale),
-            xBase[2] + xF[2] * 13.5 * followZoomScale + outRad[2] * 15.8 * followZoomScale
+            xBase[0] + xF[0] * 13.5 * distMult + outRad[0] * 15.8 * distMult,
+            xBase[1] + (8.6 + xwCh * 1.1) * (0.75 + 0.25 * followZoomScale),
+            xBase[2] + xF[2] * 13.5 * distMult + outRad[2] * 15.8 * distMult
           ];
         } else if (followDragonKey === 'phoenix') {
           if (phoenixTime < 0) {
