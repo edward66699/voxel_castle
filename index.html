@@ -775,7 +775,7 @@
       vec2 cuv = fract(uv * 0.99998);
       float edgeDist = min(min(cuv.x, 1.0 - cuv.x), min(cuv.y, 1.0 - cuv.y));
       float isWater = (emissive < -0.5) ? 1.0 : 0.0;
-      float bevel = mix(mix(0.80, 1.04, smoothstep(0.0, 0.08, edgeDist)), 1.0, isWater);
+      float bevel = mix(mix(0.76, 1.05, smoothstep(0.0, 0.08, edgeDist)), 1.0, isWater);
 
       vec3 N = inN;
       vec3 col = baseCol;
@@ -784,9 +784,9 @@
       float waterGlow = 0.0;
 
       if (emissive > 0.5) {
-        vec3 emCol = baseCol * (1.12 + 0.34 * emissive) * mix(0.95, 1.05, bevel);
+        vec3 emCol = baseCol * (1.06 + 0.28 * emissive) * mix(0.92, 1.04, bevel);
         outColor = emCol;
-        outGlow = baseCol * clamp((emissive - 0.45) * 0.80, 0.0, 1.95);
+        outGlow = baseCol * clamp((emissive - 0.72) * 0.42, 0.0, 0.92);
         return;
       }
 
@@ -1154,8 +1154,8 @@
       return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
     }
     void main() {
-      vec3 col = texture(uScene, vUV).rgb + texture(uBloom, vUV).rgb * 0.92;
-      col = aces(col * 1.08);
+      vec3 col = texture(uScene, vUV).rgb + texture(uBloom, vUV).rgb * 0.46;
+      col = aces(col * 1.10);
       vec2 q = vUV - 0.5;
       col *= 1.0 - dot(q, q) * 0.22;
       fragColor = vec4(pow(col, vec3(0.94)), 1.0);
@@ -1186,9 +1186,9 @@
     const uComp = getUniforms(compProg, ['uScene','uBloom']);
 
     // ---------- Ultra-Fine Voxel Grid (176 x 124 x 176, VS = 0.48) ----------
-    const VS = 0.48;
-    const GX = 176, GY = 124, GZ = 176;
-    const OX = 88, OY = 28, OZ = 88;
+    const VS = 0.28;
+    const GX = 280, GY = 192, GZ = 280;
+    const OX = 140, OY = 42, OZ = 140;
     const grid = new Uint8Array(GX * GY * GZ);
 
     function idx(x, y, z) {
@@ -1245,365 +1245,420 @@
     }
 
     function stoneMat(x, y, z) {
-      const r = hash3(x, y, z);
-      if (y <= 14 && r < 0.22) return 4;
-      if (r < 0.28) return 1;
-      if (r < 0.60) return 2;
-      if (r < 0.84) return 3;
+      const cy = Math.floor(y / 2);
+      const cx = Math.floor((x + (cy & 1) * 2) / 4), cz = Math.floor((z + (cy & 1) * 2) / 4);
+      const r = hash3(cx, cy, cz);
+      if (y <= 22 && r < 0.18) return 4;
+      if (r < 0.34) return 1;
+      if (r < 0.68) return 2;
+      if (r < 0.86) return 3;
       return 25;
     }
 
     function cliffMat(x, y, z) {
-      const colBias = hash3(Math.floor(x / 3), 0, Math.floor(z / 3));
-      const r = hash3(x, y, z) * 0.55 + colBias * 0.45;
+      const colBias = hash3(Math.floor(x / 6), 0, Math.floor(z / 6));
+      const r = hash3(Math.floor(x / 6), Math.floor(y / 3), Math.floor(z / 6)) * 0.50 + colBias * 0.50;
       if (r < 0.28) return 24;
-      if (r < 0.56) return 3;
-      if (r < 0.80) return 2;
+      if (r < 0.58) return 3;
+      if (r < 0.84) return 2;
       return 4;
     }
 
-    // 1. World Terrain & Surrounding Landmarks
-    for (let z = -78; z <= 78; z++) {
-      for (let x = -78; x <= 78; x++) {
-        const castleDist = Math.max(Math.abs(x) / 31.0, Math.abs(z + 2) / 29.0);
-        const ribX = Math.floor(x / 3), ribZ = Math.floor(z / 3);
-        const colCrag = (hash3(ribX, 7, ribZ) - 0.5) * 6.5 + Math.sin(x * 0.16) * 2.1 + Math.cos(z * 0.18) * 2.1;
+    for (let z = -132; z <= 132; z++) {
+      for (let x = -132; x <= 132; x++) {
+        const castleDist = Math.max(Math.abs(x) / 60.0, Math.abs(z + 2) / 57.0);
+        const ribX = Math.floor(x / 5), ribZ = Math.floor(z / 5);
+        const colCrag = (hash3(ribX, 7, ribZ) - 0.5) * 9.5 + Math.sin(x * 0.10) * 3.4 + Math.cos(z * 0.11) * 3.4;
 
-        const inPool = (x >= -24 && x <= 14 && z >= 24 && z <= 43 && Math.hypot((x + 5) * 0.78, (z - 32) * 1.1) < 20.5);
-        const peakDist = Math.hypot((x + 54) * 0.92, (z - 4) * 0.75);
-        const peakRidge = Math.max(-14, 47 - peakDist * 1.55 + colCrag * 1.0);
-        const rightDist = Math.hypot((x - 45) * 0.85, (z - 5) * 0.78);
-        const rightRidge = Math.max(-14, 19 - rightDist * 0.85 + colCrag * 0.8);
-        const pagDist = Math.hypot((x - 54) * 0.90, (z + 48) * 0.90);
-        const pagRidge = pagDist < 17 ? (24 - pagDist * 1.3 + colCrag * 0.7) : -99;
+        const inPool = (x >= -44 && x <= 24 && z >= 46 && z <= 74 && Math.hypot((x + 10) * 0.74, (z - 60) * 1.05) < 36.5);
+        const wfSlot = (x >= -44 && x <= -5 && z >= 74 && z <= 78);
+        const peakDist = Math.hypot((x + 92) * 0.90, (z - 6) * 0.76);
+        const peakRidge = Math.max(-24, 79 - peakDist * 1.52 + colCrag * 1.15);
+        const rightDist = Math.hypot((x - 82) * 0.84, (z - 8) * 0.78);
+        const rightRidge = Math.max(-24, 34 - rightDist * 0.84 + colCrag * 0.95);
+        const pagDist = Math.hypot((x - 90) * 0.88, (z + 82) * 0.88);
+        const pagRidge = pagDist < 30 ? (42 - pagDist * 1.30 + colCrag * 0.85) : -120;
 
-        const fgLeftD = Math.hypot((x + 58) * 0.85, (z - 57) * 0.85);
-        const fgLeft = fgLeftD < 20 ? (21 - fgLeftD * 1.2 + colCrag * 0.9) : -99;
-        const fgRightD = Math.hypot((x - 52) * 0.85, (z - 55) * 0.85);
-        const fgRight = fgRightD < 19 ? (19 - fgRightD * 1.15 + colCrag * 0.9) : -99;
+        const fgLeftD = Math.hypot((x + 98) * 0.85, (z - 96) * 0.85);
+        const fgLeft = fgLeftD < 34 ? (37 - fgLeftD * 1.15 + colCrag * 1.0) : -120;
+        const fgRightD = Math.hypot((x - 90) * 0.85, (z - 94) * 0.85);
+        const fgRight = fgRightD < 33 ? (34 - fgRightD * 1.12 + colCrag * 1.0) : -120;
 
-        let topY = -99;
-        if (castleDist + colCrag * 0.025 < 1.25) topY = castleDist < 0.97 ? 10 : Math.round(10 - (castleDist - 0.97) * 44 + colCrag * 0.75);
-        if (inPool) topY = Math.max(topY, 1);
-        else if (x >= -26 && x <= 16 && z >= 41 && z <= 46 && !(x >= -23 && x <= 2) && Math.hypot((x + 5) * 0.75, z - 33) < 23.5) topY = Math.max(topY, 5);
-        if (peakDist < 30) topY = Math.max(topY, Math.round(peakRidge));
-        if (rightDist < 24) topY = Math.max(topY, Math.round(rightRidge));
-        if (pagRidge > -24) topY = Math.max(topY, Math.round(pagRidge));
-        if (fgLeft > -24) topY = Math.max(topY, Math.round(fgLeft));
-        if (fgRight > -24) topY = Math.max(topY, Math.round(fgRight));
+        let topY = -120;
+        if (castleDist + colCrag * 0.015 < 1.28) topY = castleDist < 0.98 ? 17 : Math.round(17 - (castleDist - 0.98) * 76 + colCrag * 0.95);
+        if (inPool) topY = Math.max(topY, 3);
+        else if (x >= -47 && x <= 28 && z >= 73 && z <= 82 && !wfSlot && !(x >= -43 && x <= 4) && Math.hypot((x + 10) * 0.74, z - 60) < 41.0) topY = Math.max(topY, 9);
+        if (peakDist < 52) topY = Math.max(topY, Math.round(peakRidge));
+        if (rightDist < 42) topY = Math.max(topY, Math.round(rightRidge));
+        if (pagRidge > -40) topY = Math.max(topY, Math.round(pagRidge));
+        if (fgLeft > -40) topY = Math.max(topY, Math.round(fgLeft));
+        if (fgRight > -40) topY = Math.max(topY, Math.round(fgRight));
+        if (wfSlot) topY = Math.min(topY, -28);
 
-        if (topY > -28) {
-          for (let y = -27; y <= topY; y++) {
+        if (topY > -42) {
+          for (let y = -41; y <= topY; y++) {
             const isTop = y === topY;
-            if (isTop && Math.abs(x) <= 27 && Math.abs(z) <= 27 && y === 10) setV(x, y, z, stoneMat(x, y, z));
-            else if (isTop && y >= 9 && hash3(x, y + 9, z) > 0.25) setV(x, y, z, hash3(x, y, z) > 0.45 ? 9 : 10);
+            if (isTop && Math.abs(x) <= 52 && Math.abs(z) <= 52 && y === 17) setV(x, y, z, stoneMat(x, y, z));
+            else if (isTop && y >= 15 && hash3(Math.floor(x / 4), Math.floor(y / 2) + 9, Math.floor(z / 4)) > 0.22) setV(x, y, z, hash3(Math.floor(x / 4), Math.floor(y / 2), Math.floor(z / 4)) > 0.45 ? 9 : 10);
             else setV(x, y, z, cliffMat(x, y, z));
           }
         }
-        if (inPool) for (let y = 2; y <= 8; y++) setV(x, y, z, 20);
+        if (inPool) for (let y = 4; y <= 14; y++) setV(x, y, z, 20);
       }
     }
 
-    // 2. Waterfalls & Mist
-    const streamGroups = [[-23, -22, -21, -20], [-17, -16, -15, -14], [-11, -10, -9, -8], [-4, -3, -2, -1]];
+    const streamGroups = [[-43, -42, -41, -40, -39, -38], [-33, -32, -31, -30, -29, -28], [-23, -22, -21, -20, -19, -18], [-11, -10, -9, -8, -7, -6]];
     for (const grp of streamGroups) {
       for (const wx of grp) {
-        for (let y = -26; y <= 8; y++) {
-          setV(wx, y, 42, 20); setV(wx, y, 43, 20);
-          if (y < 2) setV(wx, y, 41, 24);
+        for (let y = -40; y <= 14; y++) {
+          setV(wx, y, 75, 20); setV(wx, y, 76, 20);
+          if (y < 4) setV(wx, y, 74, 24);
         }
       }
     }
-    for (const rx of [-19, -18, -13, -12, -7, -6, -5]) {
-      for (let y = -24; y <= 7; y++) { setV(rx, y, 42, cliffMat(rx, y, 42)); setV(rx, y, 43, cliffMat(rx, y, 43)); }
+    for (const rx of [-37, -36, -35, -34, -27, -26, -25, -24, -17, -16, -15, -14, -13, -12]) {
+      for (let y = -38; y <= 13; y++) { setV(rx, y, 75, cliffMat(rx, y, 75)); setV(rx, y, 76, cliffMat(rx, y, 76)); }
     }
-    for (let wx = -28; wx <= -26; wx++) {
-      for (let y = 8; y <= 17; y++) { setV(wx, y, 27, 20); setV(wx, y, 28, 20); }
+    for (let wx = -50; wx <= -46; wx++) {
+      for (let y = 14; y <= 29; y++) { setV(wx, y, 50, 20); setV(wx, y, 51, 20); }
     }
-    for (let z = 32; z <= 60; z++) {
-      for (let x = -36; x <= 20; x++) {
-        const d = Math.hypot((x + 9) * 0.65, z - 49);
-        if (d < 21) {
-          const h = Math.round(-25 + (21 - d) * 0.55 + hash3(x, 1, z) * 2.5);
-          for (let y = -27; y <= h; y++) setV(x, y, z, 21);
+    for (let z = 58; z <= 104; z++) {
+      for (let x = -64; x <= 34; x++) {
+        const d = Math.hypot((x + 17) * 0.65, z - 84);
+        if (d < 36) {
+          const h = Math.round(-40 + (36 - d) * 0.56 + hash3(Math.floor(x / 2), 1, Math.floor(z / 2)) * 3.8);
+          for (let y = -41; y <= h; y++) setV(x, y, z, 21);
         }
       }
     }
 
-    // 3. Left Peak Stairs, Toro Lanterns & Torii
     const stairPath = [
-      [-28, 12, 20], [-31, 14, 19], [-34, 16, 17], [-36, 19, 15], [-38, 22, 13],
-      [-40, 25, 11], [-43, 28, 9], [-46, 32, 8], [-48, 36, 7], [-50, 40, 6],
-      [-52, 44, 5], [-54, 47, 4]
+      [-48, 20, 34], [-52, 23, 32], [-56, 26, 29], [-60, 30, 26], [-64, 34, 23],
+      [-68, 39, 20], [-72, 44, 17], [-76, 49, 15], [-80, 55, 13], [-84, 61, 11],
+      [-87, 67, 10], [-90, 73, 9], [-92, 78, 8]
     ];
-    for (const [sx, sy, sz] of stairPath) fillBox(sx - 2, sy - 4, sz - 2, sx + 2, sy, sz + 2, stoneMat);
-    for (const [lx, ly, lz] of [[-32, 17, 15], [-39, 26, 9], [-47, 37, 5]]) {
-      setV(lx, ly, lz, 25); setV(lx, ly + 1, lz, 19); setV(lx, ly + 2, lz, 5);
+    for (const [sx, sy, sz] of stairPath) {
+      fillBox(sx - 3, sy - 6, sz - 3, sx + 3, sy, sz + 3, stoneMat);
+      fillBox(sx - 3, sy + 1, sz - 3, sx - 3, sy + 2, sz - 3, 25);
     }
-    fillBox(-59, 44, 0, -51, 47, 8, stoneMat);
-    for (let y = 48; y <= 55; y++) { setV(-58, y, 4, 23); setV(-52, y, 4, 23); }
-    fillBox(-59, 54, 4, -51, 54, 4, 23);
-    fillBox(-61, 56, 4, -49, 56, 4, 5);
-    setV(-61, 57, 4, 5); setV(-49, 57, 4, 5);
-    setV(-55, 48, 4, 23); setV(-55, 49, 4, 23); setV(-55, 50, 4, 19);
+    for (const [lx, ly, lz] of [[-54, 27, 27], [-66, 38, 19], [-78, 53, 12], [-88, 70, 8]]) {
+      fillBox(lx, ly, lz, lx, ly + 1, lz, 25); setV(lx, ly + 2, lz, 19); setV(lx, ly + 3, lz, 5);
+    }
+    fillBox(-101, 74, 0, -85, 79, 16, stoneMat);
+    fillBox(-99, 80, 2, -87, 80, 14, 25);
+    for (let y = 81; y <= 95; y++) { fillBox(-98, y, 7, -97, y, 8, 23); fillBox(-89, y, 7, -88, y, 8, 23); }
+    fillBox(-101, 91, 7, -85, 92, 8, 23);
+    fillBox(-103, 95, 6, -83, 96, 9, 5);
+    setV(-104, 97, 7, 18); setV(-82, 97, 7, 18); setV(-104, 97, 8, 18); setV(-82, 97, 8, 18);
+    fillBox(-93, 81, 7, -93, 84, 8, 23); setV(-93, 85, 7, 19); setV(-93, 85, 8, 19);
 
-    // 4. Ornate Drawbridge, Twin Harbor Guardian Pillars & Lakeside Pier
-    fillBox(-4, 10, 27, 4, 10, 41, (x, y, z) => (Math.abs(x) === 4 && z % 3 === 0) ? 18 : (Math.abs(x) === 4 ? 12 : 11));
-    fillBox(-4, 11, 41, -4, 14, 41, 12); setV(-4, 15, 41, 19);
-    fillBox(4, 11, 41, 4, 14, 41, 12); setV(4, 15, 41, 19);
-    fillBox(-23, 9, 29, -19, 9, 34, (x, y, z) => x === -23 ? 12 : 11);
-    setV(-23, 10, 34, 12); setV(-23, 11, 34, 19); setV(-23, 12, 34, 5);
-    setV(-19, 10, 34, 12); setV(-19, 11, 34, 19);
+    fillBox(-7, 17, 52, 7, 17, 76, (x, y, z) => (Math.abs(x) === 7 && z % 4 === 0) ? 18 : (Math.abs(x) === 7 ? 12 : 11));
+    fillBox(-7, 18, 75, -6, 25, 76, 12); fillBox(-7, 26, 75, -6, 27, 76, 19); setV(-7, 28, 76, 5);
+    fillBox(6, 18, 75, 7, 25, 76, 12); fillBox(6, 26, 75, 7, 27, 76, 19); setV(7, 28, 76, 5);
+    for (const ks of [-9, 9]) {
+      fillBox(ks, 17, 65, ks + (ks > 0 ? 1 : -1), 19, 68, 25);
+      fillBox(ks, 20, 66, ks, 22, 67, 2); setV(ks, 23, 67, 18);
+    }
+    fillBox(-42, 16, 51, -34, 16, 61, (x, y, z) => x === -42 ? 12 : 11);
+    fillBox(-42, 17, 60, -42, 20, 61, 12); setV(-42, 21, 61, 19); setV(-42, 22, 61, 5);
+    fillBox(-34, 17, 60, -34, 20, 61, 12); setV(-34, 21, 61, 19);
 
-    // 5. Detailed Curtain Walls, Banners, Timber Hoardings, East Sky Bridge & Pagoda
-    for (let y = 10; y <= 25; y++) {
-      for (let i = -27; i <= 27; i++) {
-        for (const [wx, wz] of [[i, -27], [i, 27], [-27, i], [27, i]]) {
-          if (wz === 27 && Math.abs(wx) <= 4 && y <= 20) {
-            if (y <= 16 || Math.hypot(wx, y - 16) <= 4.2) {
-              if (y === 20 && Math.abs(wx) <= 2) setV(wx, y, wz, 22);
-              if (y === 19 && Math.abs(wx) % 2 === 1) setV(wx, y, wz, 22);
+    for (let y = 17; y <= 43; y++) {
+      for (let i = -52; i <= 52; i++) {
+        for (const [wx, wz] of [[i, -52], [i, 52], [-52, i], [52, i]]) {
+          if (wz === 52 && Math.abs(wx) <= 7 && y <= 34) {
+            if (y <= 28 || Math.hypot(wx, y - 28) <= 7.2) {
+              if (y === 34 && Math.abs(wx) <= 5) setV(wx, y, wz, 22);
+              if (y >= 31 && y <= 33 && Math.abs(wx) % 2 === 1) setV(wx, y, wz, 22);
               continue;
             }
           }
-          if (wx === 27 && wz >= 4 && wz <= 8 && y <= 17) {
-            if (y === 17 && wz >= 5 && wz <= 7) setV(wx, y, wz, 11);
+          if (wx === 52 && wz >= 6 && wz <= 14 && y <= 30) {
+            if (y === 30 && wz >= 8 && wz <= 12) setV(wx, y, wz, 11);
             continue;
           }
-          if (y === 25) { if (Math.abs(wx + wz) % 4 <= 1) setV(wx, y, wz, stoneMat(wx, y, wz)); }
-          else if (y === 23) setV(wx, y, wz, 25);
-          else if (y === 21 && Math.abs(i) % 3 === 0) setV(wx, y, wz, 12);
-          else setV(wx, y, wz, ((y === 16 || y === 17 || y === 18) && Math.abs(i) % 6 === 0 && Math.abs(i) < 21) ? 3 : stoneMat(wx, y, wz));
+          if (y >= 41) {
+            if (Math.abs(i) % 6 <= 2) setV(wx, y, wz, stoneMat(wx, y, wz));
+          } else if (y === 39 || y === 40) {
+            setV(wx, y, wz, 25);
+          } else if (y === 37) {
+            setV(wx, y, wz, Math.abs(i) % 3 === 0 ? 12 : 25);
+          } else if ((y >= 26 && y <= 31) && Math.abs(i) % 10 === 0 && Math.abs(i) < 42) {
+            setV(wx, y, wz, 22);
+          } else {
+            setV(wx, y, wz, stoneMat(wx, y, wz));
+          }
         }
       }
     }
-    // Carved stone buttresses, wall torches & crimson silk banners
-    for (const bx of [-17, -9, 9, 17]) {
-      fillBox(bx, 10, 28, bx, 23, 28, stoneMat);
-      setV(bx, 24, 28, 18);
-      setV(bx, 19, 29, 19);
-      fillBox(28, 10, bx, 28, 23, bx, stoneMat);
-      setV(28, 24, bx, 18);
-      setV(29, 19, bx, 19);
-      fillBox(bx, 10, -28, bx, 23, -28, stoneMat);
-      fillBox(-28, 10, bx, -28, 23, bx, stoneMat);
+    for (let i = -50; i <= 50; i += 3) {
+      setV(i, 38, 53, 25); setV(i, 39, 53, 25);
+      setV(i, 38, -53, 25); setV(i, 39, -53, 25);
+      setV(53, 38, i, 25); setV(53, 39, i, 25);
+      setV(-53, 38, i, 25); setV(-53, 39, i, 25);
     }
-    for (const [bPos, isZ] of [[[13, 28], true], [[-13, 28], true], [[28, -13], false]]) {
-      for (let by = 15; by <= 21; by++) {
-        if (isZ) setV(bPos[0], by, bPos[1], by === 15 ? 18 : 23);
-        else setV(bPos[0], by, bPos[1], by === 15 ? 18 : 23);
+    for (const bx of [-34, -18, 18, 34]) {
+      fillBox(bx - 1, 17, 53, bx + 1, 39, 53, stoneMat);
+      setV(bx, 40, 53, 18); setV(bx, 32, 54, 19);
+      fillBox(53, 17, bx - 1, 53, 39, bx + 1, stoneMat);
+      setV(53, 40, bx, 18); setV(54, 32, bx, 19);
+      fillBox(bx - 1, 17, -53, bx + 1, 39, -53, stoneMat);
+      fillBox(-53, 17, bx - 1, -53, 39, bx + 1, stoneMat);
+    }
+    for (const [bx, bz, isZ] of [[26, 53, true], [-26, 53, true], [53, -26, false], [53, 26, false], [-53, 26, false]]) {
+      for (let by = 24; by <= 37; by++) {
+        const m = by === 24 || by === 37 ? 18 : 23;
+        if (isZ) { setV(bx, by, bz, m); setV(bx + 1, by, bz, m); }
+        else { setV(bx, by, bz, m); setV(bx, by, bz + 1, m); }
       }
     }
 
-    for (let x = 27; x <= 41; x++) {
-      const arch = Math.round(Math.sin(((x - 27) / 14) * Math.PI) * 3.0) + 12;
-      fillBox(x, arch, 4, x, arch, 8, (px, py, pz) => (pz === 4 || pz === 8) ? 12 : 11);
-      setV(x, arch + 1, 4, x % 3 === 0 ? 19 : 12);
-      setV(x, arch + 1, 8, x % 3 === 0 ? 19 : 12);
+    for (let x = 52; x <= 74; x++) {
+      const arch = Math.round(Math.sin(((x - 52) / 22) * Math.PI) * 5.0) + 21;
+      fillBox(x, arch, 7, x, arch, 14, (px, py, pz) => (pz === 7 || pz === 14) ? 12 : 11);
+      if (x % 4 === 0) { setV(x, arch + 1, 7, 12); setV(x, arch + 2, 7, 19); setV(x, arch + 1, 14, 12); setV(x, arch + 2, 14, 19); }
     }
 
-    fillBox(40, 10, 0, 52, 14, 12, stoneMat);
-    for (let y = 15; y <= 21; y++) {
-      for (const px of [41, 51]) for (const pz of [1, 11]) setV(px, y, pz, 23);
+    fillBox(72, 17, 1, 94, 24, 20, stoneMat);
+    fillBox(73, 25, 2, 93, 25, 19, 25);
+    for (let y = 26; y <= 37; y++) {
+      for (const px of [74, 83, 92]) for (const pz of [3, 18]) setV(px, y, pz, 23);
     }
-    fillBox(43, 15, 3, 49, 20, 9, (x, y, z) => ((x === 46 || z === 6) && y >= 16 && y <= 18) ? 19 : 11);
-    for (let step = 0; step < 5; step++) {
-      const y = 22 + step, r = 6 - step;
-      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) setV(46 + dx, y, 6 + dz, (dx + dz) % 2 === 0 ? 5 : 6);
+    fillBox(77, 26, 6, 89, 35, 15, (x, y, z) => ((Math.abs(x - 83) <= 1 || Math.abs(z - 10) <= 1) && y >= 28 && y <= 32) ? 19 : 11);
+    for (let step = 0; step < 9; step++) {
+      const y = 38 + step, r = 12 - step;
+      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+        const corner = Math.abs(dx) === r && Math.abs(dz) === r && step === 0;
+        setV(83 + dx, corner ? y + 1 : y, 10 + dz, corner ? 18 : ((Math.max(Math.abs(dx), Math.abs(dz)) & 1) === 0 ? 5 : 6));
+      }
     }
-    setV(46, 27, 6, 18); setV(46, 28, 6, 18); setV(46, 29, 6, 19);
+    fillBox(83, 47, 10, 83, 50, 10, 18); setV(83, 51, 10, 19);
 
-    fillBox(48, 12, -54, 60, 19, -42, stoneMat);
+    fillBox(79, 20, -93, 101, 33, -71, stoneMat);
+    fillBox(80, 34, -92, 100, 34, -72, 25);
     for (let tier = 0; tier < 5; tier++) {
-      const y0 = 20 + tier * 7, r = 5 - Math.floor(tier * 0.6);
-      fillBox(54 - r + 1, y0, -48 - r + 1, 54 + r - 1, y0 + 4, -48 + r - 1, (x, y, z) => (x === 54 || z === -48) && y === y0 + 2 ? 19 : ((y === y0 + 1) ? 23 : 1));
-      const er = r + 1;
+      const y0 = 35 + tier * 11, r = 9 - tier;
+      fillBox(90 - r + 1, y0, -82 - r + 1, 90 + r - 1, y0 + 7, -82 + r - 1, (x, y, z) => {
+        const edge = Math.abs(x - 90) === r - 1 || Math.abs(z + 82) === r - 1;
+        if (!edge) return 1;
+        if ((Math.abs(x - 90) <= 1 || Math.abs(z + 82) <= 1) && y >= y0 + 2 && y <= y0 + 4) return 19;
+        return y <= y0 + 1 ? 23 : 25;
+      });
+      const er = r + 3;
       for (let dz = -er; dz <= er; dz++) {
         for (let dx = -er; dx <= er; dx++) {
-          const isTip = Math.abs(dx) === er && Math.abs(dz) === er;
-          setV(54 + dx, isTip ? y0 + 6 : y0 + 5, -48 + dz, isTip ? 18 : ((dx + dz) % 2 === 0 ? 5 : 6));
+          const isTip = Math.abs(dx) >= er - 1 && Math.abs(dz) >= er - 1;
+          setV(90 + dx, isTip ? y0 + 9 : y0 + 8, -82 + dz, (Math.abs(dx) === er && Math.abs(dz) === er) ? 18 : ((Math.max(Math.abs(dx), Math.abs(dz)) & 1) === 0 ? 5 : 6));
         }
       }
-      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) setV(54 + dx, y0 + 6, -48 + dz, 6);
+      for (let step = 0; step < 3; step++) {
+        const rr = r + 1 - step;
+        for (let dz = -rr; dz <= rr; dz++) for (let dx = -rr; dx <= rr; dx++) setV(90 + dx, y0 + 9 + step, -82 + dz, (step & 1) === 0 ? 5 : 6);
+      }
     }
-    for (let s = 0; s < 6; s++) setV(54, 55 + s, -48, s === 5 ? 19 : 18);
+    for (let s = 0; s < 10; s++) setV(90, 91 + s, -82, s >= 8 ? 19 : 18);
 
-    // Ornate Gatehouse, Portcullis Arch & Courtyard Halls
-    fillBox(-8, 10, 21, 8, 27, 27, (x, y, z) => {
-      if (Math.abs(x) <= 4 && y <= 20 && (y <= 16 || Math.hypot(x, y - 16) <= 4.2)) return 0;
-      if (y >= 22 && Math.abs(x) <= 6 && z === 27) return (Math.abs(x) === 5 || Math.abs(x) === 1) ? 19 : stoneMat(x, y, z);
-      if (Math.abs(x) === 8 && z === 27 && y === 22) return 19;
+    // Grand Twin Barbican Gatehouse & Central Keep
+    fillBox(-17, 17, 44, 17, 46, 56, (x, y, z) => {
+      if (Math.abs(x) <= 7 && y <= 34 && (y <= 28 || Math.hypot(x, y - 28) <= 7.2)) return 0;
+      if (y >= 36 && Math.abs(x) <= 12 && z === 56) return (Math.abs(x) === 9 || Math.abs(x) === 3 || Math.abs(x) === 0) ? 19 : stoneMat(x, y, z);
+      if ((Math.abs(x) === 15) && z === 56 && y >= 28 && y <= 32) return 19;
       return stoneMat(x, y, z);
     });
-    fillBox(-3, 22, 28, 3, 23, 28, (x, y, z) => (x === -3 || x === 3) ? 18 : 25);
-    for (let by = 14; by <= 21; by++) {
-      setV(-7, by, 28, by === 14 ? 18 : 23); setV(-6, by, 28, by === 14 ? 18 : 23);
-      setV(6, by, 28, by === 14 ? 18 : 23); setV(7, by, 28, by === 14 ? 18 : 23);
+    for (const bs of [-14, 14]) {
+      fillBox(bs - 4, 17, 52, bs + 4, 48, 60, (x, y, z) => ((x === bs && (z === 60 || Math.abs(x - bs) === 4)) && (y === 28 || y === 39)) ? 19 : stoneMat(x, y, z));
+      for (let step = 0; step < 6; step++) {
+        const y = 49 + step, rr = 6 - step;
+        for (let dz = -rr; dz <= rr; dz++) for (let dx = -rr; dx <= rr; dx++) setV(bs + dx, y, 56 + dz, (step & 1) === 0 ? 7 : 8);
+      }
+      setV(bs, 55, 56, 18); setV(bs, 56, 56, 19);
     }
-    for (let step = 0; step < 6; step++) {
-      const y = 28 + step, zMin = 20 + step, zMax = 28 - step;
+    fillBox(-6, 38, 57, 6, 40, 57, (x, y, z) => (Math.abs(x) === 6) ? 18 : 25);
+    for (const bx of [-11, -9, 9, 11]) for (let by = 24; by <= 37; by++) setV(bx, by, 57, by === 24 ? 18 : 23);
+    for (let step = 0; step < 9; step++) {
+      const y = 47 + step, zMin = 42 + step, zMax = 58 - step;
       for (let z = zMin; z <= zMax; z++) {
-        for (let x = -11; x <= 11; x++) {
-          const isCap = step === 5 && (Math.abs(x) === 11 || z === zMin);
+        for (let x = -20 + Math.floor(step * 0.4); x <= 20 - Math.floor(step * 0.4); x++) {
+          const isCap = step === 8 && (Math.abs(x) >= 16 || z === zMin);
           setV(x, y, z, isCap ? 18 : (Math.abs(x) % 2 === 0 ? 7 : 8));
         }
       }
     }
-    for (const lx of [-8, -5, 5, 8]) setV(lx, 27, 29, 19);
-    setV(-11, 34, 25, 18); setV(11, 34, 25, 18);
-    setV(-11, 34, 20, 18); setV(11, 34, 20, 18);
-    for (let gx = -2; gx <= 2; gx += 2) setV(gx, 34, 24, 18);
-    setV(0, 35, 24, 18); setV(0, 36, 24, 19);
-    // Courtyard flagged walkway & twin garden stone lanterns
-    fillBox(-3, 10, 9, 3, 10, 20, (x, y, z) => Math.abs(x) === 3 ? 25 : 2);
-    for (const [cxL, czL] of [[-6, 15], [6, 15], [-6, 11], [6, 11]]) {
-      setV(cxL, 11, czL, 25); setV(cxL, 12, czL, 19); setV(cxL, 13, czL, 5);
+    for (const lx of [-15, -9, 9, 15]) setV(lx, 46, 58, 19);
+    fillBox(-4, 56, 50, 4, 57, 50, 18); setV(0, 58, 50, 18); setV(0, 59, 50, 19);
+
+    fillBox(-6, 17, 16, 6, 17, 51, (x, y, z) => Math.abs(x) >= 5 ? 25 : ((x + z) % 4 === 0 ? 1 : 2));
+    fillBox(-12, 14, 24, 12, 16, 36, (x, y, z) => {
+      if (Math.abs(x) === 12 || z === 24 || z === 36) return 25;
+      return y === 14 ? 2 : 20;
+    });
+    fillBox(-2, 14, 28, 2, 18, 32, 25); setV(0, 19, 30, 19); setV(0, 20, 30, 5);
+    for (const [cxL, czL] of [[-11, 22], [11, 22], [-11, 38], [11, 38], [-11, 46], [11, 46]]) {
+      fillBox(cxL, 18, czL, cxL, 19, czL, 25); setV(cxL, 20, czL, 19); setV(cxL, 21, czL, 5);
     }
 
-    fillBox(16, 10, -8, 24, 21, 9, (x, y, z) => (x === 16 || x === 24) && y === 17 && Math.abs(z) % 4 === 0 ? 19 : stoneMat(x, y, z));
-    for (let step = 0; step < 5; step++) {
-      const y = 22 + step;
-      for (let x = 15 + step; x <= 25 - step; x++) for (let z = -9; z <= 10; z++) setV(x, y, z, z % 2 === 0 ? 7 : 8);
+    fillBox(29, 17, -16, 45, 38, 18, (x, y, z) => ((x === 29 || x === 45) && (y === 26 || y === 32) && Math.abs(z) % 6 === 0) ? 19 : stoneMat(x, y, z));
+    for (let step = 0; step < 8; step++) {
+      const y = 39 + step;
+      for (let x = 27 + step; x <= 47 - step; x++) for (let z = -18; z <= 20; z++) setV(x, y, z, (z === -18 || z === 20) && step === 7 ? 18 : (z % 2 === 0 ? 7 : 8));
     }
-    fillBox(-24, 10, -6, -17, 20, 8, (x, y, z) => (x === -17) && y === 16 && Math.abs(z) % 4 === 0 ? 19 : stoneMat(x, y, z));
-    for (let step = 0; step < 4; step++) {
-      const y = 21 + step;
-      for (let x = -25 + step; x <= -16 - step; x++) for (let z = -7; z <= 9; z++) setV(x, y, z, z % 2 === 0 ? 7 : 8);
+    fillBox(-45, 17, -12, -31, 36, 16, (x, y, z) => (x === -31 && (y === 25 || y === 31) && Math.abs(z) % 6 === 0) ? 19 : stoneMat(x, y, z));
+    for (let step = 0; step < 7; step++) {
+      const y = 37 + step;
+      for (let x = -47 + step; x <= -29 - step; x++) for (let z = -14; z <= 18; z++) setV(x, y, z, z % 2 === 0 ? 7 : 8);
     }
 
-    // Watchtowers & Keep
-    function buildWatchtower(cx, cz, radius, baseH, shaftTop, roofMat1, roofMat2, spireHeight = 5) {
+    function buildWatchtower(cx, cz, radius, baseH, shaftTop, roofMat1, roofMat2, spireHeight = 6) {
       for (let y = baseH; y <= shaftTop; y++) {
         for (let dz = -radius; dz <= radius; dz++) {
           for (let dx = -radius; dx <= radius; dx++) {
             const d = Math.max(Math.abs(dx), Math.abs(dz));
+            if (y <= baseH + 3 && d <= radius + 1 && d >= radius) {
+              setV(cx + dx, y, cz + dz, 25);
+              continue;
+            }
             if (d === radius) {
-              const isWin = (y % 6 === 3) && ((dx === 0 && Math.abs(dz) === radius) || (dz === 0 && Math.abs(dx) === radius));
-              setV(cx + dx, y, cz + dz, isWin ? 19 : stoneMat(cx + dx, y, cz + dz));
+              const isQuoin = Math.abs(dx) >= radius - 1 && Math.abs(dz) >= radius - 1;
+              const isWin = (y % 8 === 4 || y % 8 === 5) && ((Math.abs(dx) <= 1 && Math.abs(dz) === radius) || (Math.abs(dz) <= 1 && Math.abs(dx) === radius));
+              setV(cx + dx, y, cz + dz, isWin ? 19 : (isQuoin ? 25 : stoneMat(cx + dx, y, cz + dz)));
             } else if (y === baseH || y === shaftTop) setV(cx + dx, y, cz + dz, stoneMat(cx + dx, y, cz + dz));
           }
         }
       }
       const cY = shaftTop + 1;
-      for (let dz = -radius - 1; dz <= radius + 1; dz++) {
-        for (let dx = -radius - 1; dx <= radius + 1; dx++) if (Math.max(Math.abs(dx), Math.abs(dz)) >= radius) setV(cx + dx, cY, cz + dz, 25);
+      for (let dz = -radius - 2; dz <= radius + 2; dz++) {
+        for (let dx = -radius - 2; dx <= radius + 2; dx++) {
+          const d = Math.max(Math.abs(dx), Math.abs(dz));
+          if (d >= radius) setV(cx + dx, cY, cz + dz, (d === radius + 2 && (dx + dz) % 2 === 0) ? 12 : 25);
+        }
       }
       const b0 = cY + 1;
-      for (let dz = -radius; dz <= radius; dz++) {
-        for (let dx = -radius; dx <= radius; dx++) {
+      for (let dz = -radius - 1; dz <= radius + 1; dz++) {
+        for (let dx = -radius - 1; dx <= radius + 1; dx++) {
           const d = Math.max(Math.abs(dx), Math.abs(dz));
-          const isPillar = (Math.abs(dx) === radius && Math.abs(dz) === radius) || ((dx === 0 || dz === 0) && d === radius && radius >= 5);
-          if (d === radius) {
+          const isPillar = (Math.abs(dx) === radius + 1 && Math.abs(dz) === radius + 1) || ((Math.abs(dx) === 3 || Math.abs(dz) === 3) && d === radius + 1 && radius >= 6);
+          if (d === radius + 1) {
             setV(cx + dx, b0, cz + dz, 11);
-            if (isPillar) for (let py = 1; py <= 4; py++) setV(cx + dx, b0 + py, cz + dz, 12);
+            if (isPillar) for (let py = 1; py <= 6; py++) setV(cx + dx, b0 + py, cz + dz, py === 1 ? 23 : 12);
           }
         }
       }
-      for (let ly = b0 + 1; ly <= b0 + 4; ly++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) setV(cx + dx, ly, cz + dz, 19);
-      const eaveY = b0 + 5, er = radius + 2;
+      const coreR = Math.max(2, Math.floor(radius * 0.42));
+      for (let ly = b0 + 1; ly <= b0 + 6; ly++) {
+        for (let dz = -coreR; dz <= coreR; dz++) for (let dx = -coreR; dx <= coreR; dx++) setV(cx + dx, ly, cz + dz, 19);
+      }
+      const eaveY = b0 + 7, er = radius + 3;
       for (let dz = -er; dz <= er; dz++) {
         for (let dx = -er; dx <= er; dx++) {
           const corner = Math.abs(dx) >= er - 1 && Math.abs(dz) >= er - 1;
-          if (Math.abs(dx) === er && Math.abs(dz) === er) setV(cx + dx, eaveY + 1, cz + dz, roofMat1);
-          else setV(cx + dx, corner ? eaveY + 1 : eaveY, cz + dz, (dx + dz) % 2 === 0 ? roofMat1 : roofMat2);
+          if (Math.abs(dx) === er && Math.abs(dz) === er) setV(cx + dx, eaveY + 2, cz + dz, 18);
+          else setV(cx + dx, corner ? eaveY + 1 : eaveY, cz + dz, (Math.max(Math.abs(dx), Math.abs(dz)) & 1) === 0 ? roofMat1 : roofMat2);
         }
       }
-      let r = radius + 1, ry = eaveY + 1;
+      let r = radius + 2, ry = eaveY + 1;
       while (r >= 0) {
-        const layers = r <= 2 ? 2 : 1;
+        const layers = r <= 3 ? 2 : 1;
         for (let l = 0; l < layers; l++) {
-          for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) setV(cx + dx, ry, cz + dz, (dx + dz + ry) % 2 === 0 ? roofMat1 : roofMat2);
+          for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) setV(cx + dx, ry, cz + dz, (ry & 1) === 0 ? roofMat1 : roofMat2);
           ry++;
         }
         r--;
       }
       for (let s = 0; s < spireHeight; s++) setV(cx, ry + s, cz, 18);
-      for (let fx = 1; fx <= 4; fx++) setV(cx + fx, ry + spireHeight - 1, cz, fx === 4 ? 18 : 23);
+      setV(cx, ry + spireHeight, cz, 19);
+      for (let fx = 1; fx <= 6; fx++) setV(cx + fx, ry + spireHeight - 1, cz, fx === 6 ? 18 : 23);
     }
 
-    buildWatchtower(-27, -27, 5, 10, 30, 5, 6, 4);
-    buildWatchtower(27, -27, 5, 10, 32, 5, 6, 4);
-    buildWatchtower(-27, 27, 5, 10, 29, 5, 6, 4);
-    buildWatchtower(27, 27, 5, 10, 31, 5, 6, 4);
+    buildWatchtower(-52, -52, 9, 17, 50, 5, 6, 7);
+    buildWatchtower( 52, -52, 9, 17, 54, 5, 6, 7);
+    buildWatchtower(-52,  52, 9, 17, 48, 5, 6, 7);
+    buildWatchtower( 52,  52, 9, 17, 52, 5, 6, 7);
 
-    fillBox(-15, 10, -18, 15, 33, 8, (x, y, z) => {
-      const onEdge = Math.abs(x) === 15 || z === -18 || z === 8;
-      if (!onEdge && y > 10 && y < 33) return 0;
-      if (y === 33) return ((x + z) % 3 === 0 && onEdge) ? 2 : (onEdge ? 0 : 1);
-      if ((y === 18 || y === 26) && (Math.abs(x) === 7 || Math.abs(x) === 11 || z === -5) && onEdge) return 19;
-      if (z === 8 && Math.abs(x) <= 3 && y <= 18) return y === 18 ? 11 : 0;
+    fillBox(-27, 17, -34, 27, 56, 15, (x, y, z) => {
+      const onEdge = Math.abs(x) === 27 || z === -34 || z === 15;
+      if (!onEdge && y > 17 && y < 56) return 0;
+      if (y === 56) return ((x + z) % 4 === 0 && onEdge) ? 25 : (onEdge ? 0 : 1);
+      if ((y >= 28 && y <= 31 || y >= 43 && y <= 46) && (Math.abs(x) === 10 || Math.abs(x) === 20 || Math.abs(z) === 12) && onEdge) return 19;
+      if (z === 15 && Math.abs(x) <= 6 && y <= 31) return y === 31 ? 11 : 0;
       return stoneMat(x, y, z);
     });
-    for (let by = 23; by <= 30; by++) { setV(-9, by, 9, by === 23 ? 18 : 23); setV(9, by, 9, by === 23 ? 18 : 23); }
-    fillBox(-10, 34, -14, 10, 45, 4, (x, y, z) => {
-      const onEdge = Math.abs(x) === 10 || z === -14 || z === 4;
-      if (!onEdge && y > 34 && y < 45) return 0;
-      if (y === 45) return ((x + z) % 3 === 0 && onEdge) ? 2 : (onEdge ? 0 : 1);
-      if (z === 4 && Math.abs(x) <= 2 && y <= 40) return y === 40 ? 18 : 19;
+    for (const bx of [-16, 16]) for (let by = 38; by <= 52; by++) { setV(bx, by, 16, by === 38 ? 18 : 23); setV(bx + 1, by, 16, by === 38 ? 18 : 23); }
+
+    fillBox(-18, 57, -26, 18, 76, 8, (x, y, z) => {
+      const onEdge = Math.abs(x) === 18 || z === -26 || z === 8;
+      if (!onEdge && y > 57 && y < 76) return 0;
+      if (y === 76) return ((x + z) % 4 === 0 && onEdge) ? 25 : (onEdge ? 0 : 1);
+      if (z === 8 && (Math.abs(x) <= 4 || Math.abs(x) === 11) && y >= 63 && y <= 69) return y === 69 ? 18 : 19;
       return stoneMat(x, y, z);
     });
-    fillBox(-4, 34, 3, 4, 38, 9, (x, y, z) => (x === 0 && z === 9 && y <= 37) ? 19 : stoneMat(x, y, z));
-    for (let step = 0; step < 5; step++) {
-      const y = 39 + step;
-      for (let x = -6 + step; x <= 6 - step; x++) for (let z = 2; z <= 10; z++) setV(x, y, z, (x + z) % 2 === 0 ? 5 : 6);
+    fillBox(-8, 57, 6, 8, 65, 17, (x, y, z) => (Math.abs(x) <= 2 && z === 17 && y >= 59 && y <= 63) ? 19 : stoneMat(x, y, z));
+    for (let step = 0; step < 8; step++) {
+      const y = 66 + step;
+      for (let x = -11 + step; x <= 11 - step; x++) for (let z = 4; z <= 19; z++) setV(x, y, z, (step & 1) === 0 ? 5 : 6);
     }
 
-    buildWatchtower(0, -5, 7, 34, 60, 5, 6, 7);
-    buildWatchtower(-12, -13, 4, 33, 46, 5, 6, 3);
-    buildWatchtower(12, -13, 4, 33, 46, 5, 6, 3);
+    buildWatchtower(0, -10, 12, 57, 102, 5, 6, 11);
+    buildWatchtower(-21, -24, 7, 56, 78, 5, 6, 6);
+    buildWatchtower( 21, -24, 7, 56, 78, 5, 6, 6);
 
-    fillBox(-3, 10, 8, 3, 10, 27, 25);
-    for (const [bx, by, bz] of [[-10, 11, 13], [10, 11, 13], [-15, 11, 23], [15, 11, 23], [-10, 46, 4], [10, 46, 4]]) {
-      setV(bx, by, bz, 3); setV(bx, by + 1, bz, 3); setV(bx, by + 2, bz, 19);
+    fillBox(-6, 17, 15, 6, 17, 51, 25);
+    for (const [bx, by, bz] of [[-18, 18, 22], [18, 18, 22], [-26, 18, 42], [26, 18, 42], [-18, 77, 8], [18, 77, 8]]) {
+      fillBox(bx, by, bz, bx, by + 3, bz, 3); setV(bx, by + 4, bz, 19);
     }
-    for (const [mx, my, mz] of [[37, 13, 24], [39, 12, 26], [35, 14, 22]]) {
+    for (const [mx, my, mz] of [[64, 21, 42], [68, 20, 46], [60, 23, 38]]) {
       setV(mx, my, mz, 25); setV(mx, my + 1, mz, 26);
     }
 
     function buildTree(tx, ty, tz, isSakura, scale = 1) {
       if (isSakura) {
-        const h = 8;
-        for (let y = 0; y < h; y++) setV(tx, ty + y, tz, 12);
-        // Flared trunk roots & fallen blossom scatter on ground
-        for (const [rx, rz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) setV(tx + rx, ty + 1, tz + rz, 12);
-        setV(tx + 1, ty + 4, tz, 12); setV(tx + 2, ty + 5, tz, 12); setV(tx - 1, ty + 5, tz + 1, 12); setV(tx, ty + 5, tz - 1, 12);
-        for (let dy = -2; dy <= 4; dy++) {
-          const r = dy >= 3 ? 2 : 5;
+        const h = 13;
+        for (let y = 0; y < h; y++) {
+          setV(tx, ty + y, tz, 12);
+          if (y < 6) setV(tx + 1, ty + y, tz, 12);
+        }
+        for (const [rx, rz] of [[2, 0], [-1, 0], [0, 2], [0, -2]]) fillBox(tx + Math.min(0, rx), ty + 1, tz + Math.min(0, rz), tx + Math.max(0, rx), ty + 2, tz + Math.max(0, rz), 12);
+        for (const [bx, by, bz] of [[2, 7, 0], [3, 8, 1], [-2, 8, 1], [-3, 9, 2], [0, 8, -2], [1, 9, -3]]) setV(tx + bx, ty + by, tz + bz, 12);
+        for (let dy = -3; dy <= 6; dy++) {
+          const r = dy >= 5 ? 4 : 8;
           for (let dz = -r; dz <= r; dz++) {
             for (let dx = -r; dx <= r; dx++) {
-              if (Math.hypot(dx, dz) > r + 0.45) continue;
-              const p = hash3(tx + dx, ty + dy, tz + dz);
-              if (p > 0.16) setV(tx + dx, ty + h + dy, tz + dz, p < 0.46 ? 13 : (p < 0.80 ? 14 : 15));
+              const distH = Math.hypot(dx, dz);
+              if (distH > r + 0.45) continue;
+              const p = hash3(tx + Math.floor(dx / 2), ty + Math.floor(dy / 2), tz + Math.floor(dz / 2));
+              if (distH < r - 1.5 || p > 0.16) setV(tx + dx, ty + h + dy, tz + dz, p < 0.46 ? 13 : (p < 0.80 ? 14 : 15));
             }
           }
         }
-        for (let p = 0; p < 12; p++) {
-          const px = tx + Math.round((hash3(tx, p, 7) - 0.5) * 9), pz = tz + Math.round((hash3(tz, p, 9) - 0.5) * 9);
+        for (let p = 0; p < 18; p++) {
+          const px = tx + Math.round((hash3(tx, p, 7) - 0.5) * 14), pz = tz + Math.round((hash3(tz, p, 9) - 0.5) * 14);
           if (getV(px, ty + 1, pz) === 0 && getV(px, ty, pz) > 0) setV(px, ty + 1, pz, 14);
         }
       } else {
-        const h = scale > 1 ? 18 : 12;
-        for (let y = 0; y < h; y++) setV(tx, ty + y, tz, 12);
-        for (const [rx, rz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) setV(tx + rx, ty + 1, tz + rz, 12);
-        for (let dy = 0; dy <= h + 2; dy++) {
-          const r = Math.max(0, Math.round((1 - dy / (h + 3)) * (scale > 1 ? 6.2 : 4.4)));
-          if (dy % 2 === 1 && r > 1) continue;
+        const h = scale > 1 ? 28 : 20;
+        for (let y = 0; y < h; y++) {
+          setV(tx, ty + y, tz, 12);
+          if (scale > 1 && y < 10) setV(tx + 1, ty + y, tz, 12);
+        }
+        for (const [rx, rz] of [[2, 0], [-1, 0], [0, 2], [0, -2]]) setV(tx + rx, ty + 1, tz + rz, 12);
+        for (let dy = 0; dy <= h + 3; dy++) {
+          const r = Math.max(0, Math.round((1 - dy / (h + 4)) * (scale > 1 ? 9.6 : 6.8)));
+          if (dy % 3 === 1 && r > 2) continue;
           for (let dz = -r; dz <= r; dz++) {
             for (let dx = -r; dx <= r; dx++) {
               if (Math.hypot(dx, dz) > r + 0.4) continue;
-              setV(tx + dx, ty + 4 + dy, tz + dz, (dx + dz + dy) % 2 === 0 ? 16 : 17);
+              setV(tx + dx, ty + 6 + dy, tz + dz, ((Math.floor(dx / 2) + Math.floor(dz / 2) + Math.floor(dy / 2)) & 1) === 0 ? 16 : 17);
             }
           }
         }
       }
     }
 
-    buildTree(12, 10, 16, true); buildTree(-16, 10, 17, false); buildTree(-18, 10, -14, true);
-    buildTree(-42, 30, -8, false, 2); buildTree(-46, 33, 12, false, 2); buildTree(-64, 28, -9, false, 2);
-    buildTree(-36, 22, 18, false, 1); buildTree(-65, 22, 10, false, 2);
-    buildTree(39, 13, 19, true); buildTree(54, 14, 15, true); buildTree(43, 15, -10, false, 2);
-    buildTree(56, 13, -3, false, 1); buildTree(35, 12, -20, false, 1);
-    buildTree(-58, 18, 56, false, 2); buildTree(-49, 14, 62, false, 1); buildTree(53, 16, 55, false, 2);
+    buildTree(22, 17, 29, true); buildTree(-24, 17, 30, false); buildTree(-32, 17, -24, true); buildTree(23, 17, -23, true);
+    buildTree(-72, 48, -14, false, 2); buildTree(-78, 53, 22, false, 2); buildTree(-108, 46, -16, false, 2);
+    buildTree(-62, 36, 32, false, 1); buildTree(-110, 36, 18, false, 2);
+    buildTree(68, 22, 34, true); buildTree(92, 24, 26, true); buildTree(74, 25, -18, false, 2);
+    buildTree(96, 22, -6, false, 1); buildTree(62, 20, -34, false, 1);
+    buildTree(-98, 30, 94, false, 2); buildTree(-84, 24, 104, false, 1); buildTree(90, 28, 94, false, 2);
 
     // Growable Static Mesh Builder
     const FACES = [
@@ -1761,9 +1816,9 @@
 
     // Floating Satellite Sky-Islets (Stepped Karst Crags, Sanctuaries & Mist Cascades)
     const SATELLITE_ISLES = [
-      { x: -58, y: 12, z: -36, rx: 11.5, rz: 9.5, h: 20, hasShrine: true, hasWaterfall: false },
-      { x:  58, y: 13, z: -40, rx: 12.0, rz: 10.0, h: 22, hasShrine: true, hasWaterfall: true },
-      { x:   4, y: 10, z: -66, rx: 13.0, rz: 9.5, h: 21, hasShrine: false, hasWaterfall: true }
+      { x: -64, y: 12.5, z: -38, rx: 12.0, rz: 10.0, h: 21, hasShrine: true, hasWaterfall: false },
+      { x:  63, y: 13.5, z: -42, rx: 13.5, rz: 11.0, h: 23, hasShrine: true, hasWaterfall: true },
+      { x:   4, y: 10.5, z: -72, rx: 13.5, rz: 10.0, h: 22, hasShrine: false, hasWaterfall: true }
     ];
     for (let idx = 0; idx < SATELLITE_ISLES.length; idx++) {
       const isl = SATELLITE_ISLES[idx];
@@ -1791,16 +1846,14 @@
         addWorldBox(px, isl.y + 6.4 * ph, pz, 1.1 * ph, 1.2, 1.1 * ph, [0.18, 0.43, 0.23], 0.96, 3);
       }
       if (idx === 1) {
-        // Ornate Volcanic-Gold Imperial Phoenix Sanctuary (Đài Phượng Hoàng) with 4 Sacred Fire Braziers!
-        addWorldBox(51.5, 13.8, -36.5, 5.8, 2.2, 5.2, [0.24, 0.19, 0.19], 0.92, 0);
-        addWorldBox(51.5, 15.1, -36.5, 4.2, 0.9, 3.8, [0.34, 0.27, 0.24], 0.95, 1);
-        addWorldBox(51.5, 15.65, -36.5, 2.4, 0.5, 2.4, [0.96, 0.66, 0.20], 0.98, 5, 0.95);
-        for (const [bxO, bzO] of [[-2.4, -2.0], [2.4, -2.0], [-2.4, 2.0], [2.4, 2.0]]) {
-          addWorldBox(51.5 + bxO, 15.4, -36.5 + bzO, 0.55, 1.3, 0.55, [0.36, 0.28, 0.24], 0.92, 1);
-          addWorldBox(51.5 + bxO, 16.2, -36.5 + bzO, 0.44, 0.48, 0.44, [1.0, 0.54, 0.14], 1.0, 5, 1.9);
+        addWorldBox(55.5, 14.3, -38.5, 6.2, 2.2, 5.6, [0.24, 0.19, 0.19], 0.92, 0);
+        addWorldBox(55.5, 15.6, -38.5, 4.4, 0.9, 4.0, [0.34, 0.27, 0.24], 0.95, 1);
+        addWorldBox(55.5, 16.15, -38.5, 2.5, 0.5, 2.5, [0.96, 0.66, 0.20], 0.98, 5, 0.95);
+        for (const [bxO, bzO] of [[-2.5, -2.1], [2.5, -2.1], [-2.5, 2.1], [2.5, 2.1]]) {
+          addWorldBox(55.5 + bxO, 15.9, -38.5 + bzO, 0.55, 1.3, 0.55, [0.36, 0.28, 0.24], 0.92, 1);
+          addWorldBox(55.5 + bxO, 16.7, -38.5 + bzO, 0.44, 0.48, 0.44, [1.0, 0.54, 0.14], 1.0, 5, 1.9);
         }
-        // Connecting flagstone terrace steps toward shrine + cascading hanging moss roots under cliff
-        addWorldBox(54.8, 14.9, -38.0, 2.4, 0.5, 2.0, [0.46, 0.41, 0.36], 0.92, 1);
+        addWorldBox(59.2, 15.4, -40.0, 2.6, 0.5, 2.2, [0.46, 0.41, 0.36], 0.92, 1);
       }
       // Hanging moss vines beneath floating sky-islets
       for (let v = 0; v < 4; v++) {
@@ -1830,7 +1883,7 @@
 
     // Two-Tier Sculpted Karst Mountain Halo (Tapered Peaks, Moss Ledges & Horizon Silhouettes)
     for (let i = 0; i < 30; i++) {
-      const ang = (i / 30) * Math.PI * 2, rad = 98 + hash3(i, 4, 8) * 26;
+      const ang = (i / 30) * Math.PI * 2, rad = 108 + hash3(i, 4, 8) * 26;
       const mx = Math.cos(ang) * rad, mz = Math.sin(ang) * rad, peakH = 58 + hash3(i, 2, 7) * 36;
       for (let s = 0; s < 5; s++) {
         const sx = mx + (hash3(i, s, 11) - 0.5) * 28, sz = mz + (hash3(i, s, 12) - 0.5) * 28;
@@ -1971,8 +2024,8 @@
     function rebuildFramebuffers(w, h) {
       if (fboW === w && fboH === h) return;
       fboW = w; fboH = h;
-      bloomW = Math.max(2, Math.floor(w / 4));
-      bloomH = Math.max(2, Math.floor(h / 4));
+      bloomW = Math.max(2, Math.floor(w / 2));
+      bloomH = Math.max(2, Math.floor(h / 2));
       if (sceneFBO) {
         gl.deleteFramebuffer(sceneFBO); gl.deleteTexture(sceneColTex); gl.deleteTexture(sceneGlowTex); gl.deleteRenderbuffer(sceneDepthRB);
         gl.deleteFramebuffer(bloomFBO1); gl.deleteTexture(bloomTex1); gl.deleteFramebuffer(bloomFBO2); gl.deleteTexture(bloomTex2);
@@ -2050,8 +2103,8 @@
     }
 
     const weatherParticles = [];
-    for (let i = 0; i < 4800; i++) {
-      const nearZone = i >= 2600;
+    for (let i = 0; i < 2800; i++) {
+      const nearZone = i >= 1450;
       const span = nearZone ? 132 : 240;
       weatherParticles.push({
         x: hash3(i, 41, 1) * span,
@@ -2225,27 +2278,27 @@
     });
 
     const BRAZIERS = [
-      [-10 * VS, 13 * VS, 13 * VS], [10 * VS, 13 * VS, 13 * VS],
-      [-15 * VS, 13 * VS, 23 * VS], [15 * VS, 13 * VS, 23 * VS],
-      [-10 * VS, 48 * VS, 4 * VS], [10 * VS, 48 * VS, 4 * VS],
-      [-27 * VS, 36 * VS, 27 * VS], [27 * VS, 38 * VS, 27 * VS],
-      [0, 66 * VS, -5 * VS], [46 * VS, 21 * VS, 6 * VS], [54 * VS, 56 * VS, -48 * VS]
+      [-18 * VS, 22 * VS, 22 * VS], [18 * VS, 22 * VS, 22 * VS],
+      [-26 * VS, 22 * VS, 42 * VS], [26 * VS, 22 * VS, 42 * VS],
+      [-18 * VS, 81 * VS, 8 * VS], [18 * VS, 81 * VS, 8 * VS],
+      [-52 * VS, 65 * VS, 52 * VS], [52 * VS, 69 * VS, 52 * VS],
+      [0, 120 * VS, -10 * VS], [83 * VS, 40 * VS, 10 * VS], [90 * VS, 99 * VS, -82 * VS]
     ];
 
-    // ---------- 3-Dragon Strictly Non-Colliding Orbits + Follow-The-Leader Convergence Rig ----------
-    const CONVERGE_POINT = [0.0, 22.0, 22.0];
+    const CONVERGE_POINT = [0.0, 23.5, 25.5];
 
     const DRAGON_CONFIGS = {
       green: {
-        segs: 72, segLen: 0.78, speed: 0.34, dir: -1, theta: 2.15, safeR: 14.0,
+        segs: 72, segLen: 0.78, speed: 0.34, dir: -1, theta: 2.15, safeR: 16.5,
         convEntryTheta: 2.35, swimFreq: 4.2, swimAmp: 1.05, convPath: null,
+        swimPhase: 0, vertPhase: 0, limbPhase: 0, bBoostSmooth: 0,
         orbitFn: th => {
-          const rx = 14.5 + 1.4 * Math.sin(th * 2.0 + 0.5);
-          const rz = 13.5 + 1.4 * Math.cos(th * 2.0 + 0.5);
-          return [Math.cos(th) * rx, 30.2 - 2.4 * Math.sin(th) + 1.3 * Math.cos(th * 2.0 + 0.4), Math.sin(th) * rz - 2.0];
+          const rx = 16.5 + 1.4 * Math.sin(th * 2.0 + 0.5);
+          const rz = 16.0 + 1.4 * Math.cos(th * 2.0 + 0.5);
+          return [Math.cos(th) * rx, 34.0 - 2.2 * Math.sin(th) + 1.3 * Math.cos(th * 2.0 + 0.4), Math.sin(th) * rz - 2.0];
         },
         convRawFn: u => {
-          const head = [-11.5, 25.5, 20.5];
+          const head = [-12.5, 27.0, 23.5];
           return [
             head[0] - 13.5 * Math.sin(u * 1.85) + 3.2 * Math.sin(u * 4.2),
             head[1] + 6.5 * Math.sin(u * 2.2) - 1.8 * u,
@@ -2254,15 +2307,16 @@
         }
       },
       white: {
-        segs: 76, segLen: 0.74, speed: 0.38, dir: 1, theta: -0.65, safeR: 19.5,
+        segs: 76, segLen: 0.74, speed: 0.38, dir: 1, theta: -0.65, safeR: 22.0,
         convEntryTheta: 0.85, swimFreq: 5.1, swimAmp: 1.38, convPath: null,
+        swimPhase: 1.1, vertPhase: 0.8, limbPhase: 1.1, bBoostSmooth: 0,
         orbitFn: th => {
-          const rx = 22.5 + 1.7 * Math.cos(th * 2.0 - 0.6);
-          const rz = 20.5 + 1.7 * Math.sin(th * 2.0 - 0.6);
-          return [Math.cos(th) * rx, 35.4 - 2.2 * Math.sin(th) + 1.4 * Math.cos(th * 2.0 - 0.3), Math.sin(th) * rz - 1.8];
+          const rx = 24.5 + 1.7 * Math.cos(th * 2.0 - 0.6);
+          const rz = 23.5 + 1.7 * Math.sin(th * 2.0 - 0.6);
+          return [Math.cos(th) * rx, 39.2 - 2.2 * Math.sin(th) + 1.4 * Math.cos(th * 2.0 - 0.3), Math.sin(th) * rz - 1.8];
         },
         convRawFn: u => {
-          const head = [1.8, 33.8, 17.5];
+          const head = [1.8, 35.5, 20.5];
           return [
             head[0] + 12.5 * Math.sin(u * 2.3) + 3.0 * Math.sin(u * 4.8),
             head[1] + 2.8 * Math.sin(u * 3.2) - 2.6 * u * u,
@@ -2271,15 +2325,16 @@
         }
       },
       black: {
-        segs: 72, segLen: 0.80, speed: 0.28, dir: -1, theta: 0.75, safeR: 25.0,
+        segs: 72, segLen: 0.80, speed: 0.28, dir: -1, theta: 0.75, safeR: 30.0,
         convEntryTheta: 0.25, swimFreq: 3.6, swimAmp: 1.12, convPath: null,
+        swimPhase: 2.3, vertPhase: 1.7, limbPhase: 2.3, bBoostSmooth: 0,
         orbitFn: th => {
-          const rx = 39.2 + 1.8 * Math.sin(th * 2.0 + 1.1);
-          const rz = 36.8 + 1.8 * Math.cos(th * 2.0 + 1.1);
-          return [Math.cos(th) * rx, 24.2 - 2.2 * Math.sin(th) + 1.5 * Math.sin(th * 2.0 + 1.0), Math.sin(th) * rz - 1.5];
+          const rx = 43.5 + 1.8 * Math.sin(th * 2.0 + 1.1);
+          const rz = 41.0 + 1.8 * Math.cos(th * 2.0 + 1.1);
+          return [Math.cos(th) * rx, 26.5 - 2.2 * Math.sin(th) + 1.5 * Math.sin(th * 2.0 + 1.0), Math.sin(th) * rz - 1.5];
         },
         convRawFn: u => {
-          const head = [12.5, 25.2, 20.5];
+          const head = [13.5, 26.8, 23.5];
           return [
             head[0] + 12.0 * Math.sin(u * 2.1) - 2.0 * Math.sin(u * 4.0),
             head[1] + 5.0 * Math.sin(u * 2.6) - 2.5 * u,
@@ -2454,11 +2509,11 @@
       needConvBurst = convTime >= 2.35 && convTime < 5.75;
     }
 
-    function buildDragonSkeleton(cfg, time, sHeadOpt, aimW, swimBoost, breathPose = null) {
+    function buildDragonSkeleton(cfg, sHeadOpt, aimW, swimBoost, breathPose = null) {
       const N = cfg.segs;
       const pos = new Array(N);
       let rawOrbHeadFwd = null;
-      const bBoost = breathPose ? breathPose.swimBoost : 0;
+      const sp = cfg.swimPhase, vp = cfg.vertPhase;
 
       if (sHeadOpt !== null && cfg.convPath) {
         const cp = cfg.convPath;
@@ -2470,9 +2525,8 @@
           const tang = norm3(sub(pAhead, pBack));
           const lat = norm3(cross([0, 1, 0], tang));
           const amp = clamp(i / 6.0, 0.05, 1.0) * cfg.swimAmp * (0.68 + swimBoost * 0.55);
-          const freq = cfg.swimFreq * 1.12;
-          const sw = Math.sin(time * freq - i * 0.24) * amp;
-          const sv = Math.cos(time * (freq * 0.78) - i * 0.21) * amp * 0.34;
+          const sw = Math.sin(sp - i * 0.24) * amp;
+          const sv = Math.cos(vp - i * 0.21) * amp * 0.34;
           pos[i] = [base[0] + lat[0] * sw, base[1] + sv, base[2] + lat[2] * sw];
         }
         rawOrbHeadFwd = norm3(sub(pos[0], pos[2]));
@@ -2488,10 +2542,9 @@
           const tang = norm3(sub(pAhead, orbP));
           const lat = norm3(cross([0, 1, 0], tang));
           const neckBias = i < 16 ? Math.sin((1.0 - i / 16) * Math.PI * 0.85) : 0.0;
-          const amp = clamp(i / 6.0, 0.06, 1.0) * cfg.swimAmp * (1.0 + bBoost * 0.45);
-          const freq = cfg.swimFreq * (1.0 + bBoost * 0.14);
-          const sw = Math.sin(time * freq - i * 0.24) * amp;
-          const sv = Math.cos(time * (freq * 0.78) - i * 0.21) * amp * 0.36 + neckBias * (breathPose ? breathPose.charge * 1.1 : 0);
+          const amp = clamp(i / 6.0, 0.06, 1.0) * cfg.swimAmp * (1.0 + cfg.bBoostSmooth * 0.45);
+          const sw = Math.sin(sp - i * 0.24) * amp;
+          const sv = Math.cos(vp - i * 0.21) * amp * 0.36 + neckBias * (breathPose ? breathPose.charge * 1.1 : 0);
           const lungeF = breathPose ? (breathPose.recoil * neckBias) : 0;
           pos[i] = [orbP[0] + lat[0] * sw + tang[0] * lungeF, orbP[1] + sv, orbP[2] + lat[2] * sw + tang[2] * lungeF];
         }
@@ -2560,7 +2613,7 @@
     let fogDensSmooth = currentWeather === 'fog' ? 2.35 : (currentWeather === 'clear' ? 1.0 : 1.45);
 
     // ---------- Camera & Controls ----------
-    const cam = { yaw: 0.46, pitch: 0.24, dist: 92, target: [-1, 14, 2], dragging: false, panning: false, lastX: 0, lastY: 0 };
+    const cam = { yaw: 0.46, pitch: 0.24, dist: 104, target: [0, 15, 2], dragging: false, panning: false, lastX: 0, lastY: 0 };
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
@@ -2584,7 +2637,7 @@
     });
     canvas.addEventListener('pointerup', () => { cam.dragging = false; });
     canvas.addEventListener('pointercancel', () => { cam.dragging = false; });
-    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 132); }, { passive: false });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 155); }, { passive: false });
 
     function syncTimeButtons() {
       document.querySelectorAll('.time-btn').forEach(b => {
@@ -2638,10 +2691,10 @@
 
     document.querySelectorAll('.cam-btn').forEach(btn => btn.addEventListener('click', () => {
       currentCamMode = btn.dataset.cam;
-      if (currentCamMode === 'render') { cam.yaw = 0.46; cam.pitch = 0.24; cam.dist = 92; cam.target = [-1, 14, 2]; }
-      else if (currentCamMode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = 96; cam.target = [2, 14, 0]; }
-      else if (currentCamMode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = 46; cam.target = [-6, 4, 17]; }
-      else if (currentCamMode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = 64; cam.target = [21, 14, -8]; }
+      if (currentCamMode === 'render') { cam.yaw = 0.46; cam.pitch = 0.24; cam.dist = 104; cam.target = [0, 15, 2]; }
+      else if (currentCamMode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = 108; cam.target = [2, 15, 0]; }
+      else if (currentCamMode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = 52; cam.target = [-6, 4, 20]; }
+      else if (currentCamMode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = 70; cam.target = [24, 15, -10]; }
       syncCamButtons(); syncFollowButtons();
     }));
 
@@ -2652,7 +2705,7 @@
     const pendingGpuQ = [];
     let dynResScale = 1.0, gpuMsSmooth = 8.0, lastScaleAdjust = 0;
     let fpsFrames = 0, fpsAccumMs = 0, shownFps = 60, lastRafMs = performance.now(), rafDtSmooth = 16.6;
-    const MAX_RENDER_PIXELS = 1220000;
+    const MAX_RENDER_PIXELS = 1080000;
 
     const btnFs = document.getElementById('btn-fs');
     btnFs.addEventListener('click', () => { if (!document.fullscreenElement) stage.requestFullscreen?.(); else document.exitFullscreen?.(); });
@@ -2935,26 +2988,25 @@
     }
 
     // ---------- Mythical Imperial Fire Phoenix (Thần Điểu Phượng Hoàng Lửa) ----------
-    const PHOENIX_PERCH = [51.5, 16.0, -36.5];
+    const PHOENIX_PERCH = [55.5, 16.5, -38.5];
     const PHOENIX_TRAIL_HIST = [];
     function buildPhoenixFlightPath() {
-      // Decisive explosive vault right off perch -> swoops gracefully below main island rim & waterfall mist -> climbs back!
       const ctrl = [
-        [51.5, 16.0, -36.5],
-        [49.5, 22.0, -25.5],
-        [48.5, 15.5,  -4.0],
-        [46.0, 11.8,  17.5],
-        [36.5, 10.2,  35.5],
-        [11.0,  3.8,  39.0],
-        [-14.5, 1.5,  39.0],
-        [-34.5, 2.8,  42.0],
-        [-47.0, 4.8,  20.5],
-        [-47.5, 8.2, -16.0],
-        [-24.0, 10.8, -45.5],
-        [ 16.5, 12.2, -47.0],
-        [ 45.5, 16.5, -43.0],
-        [ 55.2, 20.5, -38.8],
-        [51.5, 16.0, -36.5]
+        [55.5, 16.5, -38.5],
+        [53.0, 22.8, -26.5],
+        [51.5, 16.0,  -4.0],
+        [49.0, 12.2,  19.5],
+        [39.5, 10.5,  38.5],
+        [12.0,  4.0,  42.5],
+        [-15.5, 1.5,  42.5],
+        [-37.5, 2.8,  45.5],
+        [-50.5, 5.2,  22.5],
+        [-51.0, 8.6, -17.5],
+        [-26.0, 11.2, -49.0],
+        [ 18.0, 12.6, -50.5],
+        [ 49.0, 17.0, -45.5],
+        [ 59.5, 21.0, -41.0],
+        [55.5, 16.5, -38.5]
       ];
       function catmull(p0, p1, p2, p3, t) {
         const t2 = t * t, t3 = t2 * t;
@@ -3316,7 +3368,7 @@
     const lightColBuf = new Float32Array(39);
     const lightRangeBuf = new Float32Array(13);
 
-    let lastRealTime = null, boostPhaseAccum = 0, perfFrameIdx = 0;
+    let lastRealTime = null, perfFrameIdx = 0;
     function frame(now) {
       const realWallMs = now - lastRafMs;
       lastRafMs = now;
@@ -3389,7 +3441,6 @@
         ? smootherstep(0.0, 1.15, boostTime) * (1.0 - smootherstep(boostDuration - 1.65, boostDuration, boostTime))
         : 0.0;
       const orbitSpeedMult = 1.0 + boostRamp * 5.20;
-      if (playing && boostRamp > 0.001) boostPhaseAccum += dt * boostRamp * 2.60;
       const crimsonSky = boostRamp;
 
       // Follow-The-Leader Convergence Flight Choreography (0..2.35 swoop, 2.35..5.75 hover+fire, 5.75..7.80 release)
@@ -3541,11 +3592,23 @@
         poseBlack.active ? 'border-violet-300 bg-violet-600 text-white shadow-sm' : 'border-violet-500/60 bg-violet-500/15 hover:bg-violet-500/30 text-violet-400'
       }`;
 
-      // Build All 3 Dragon Skeletons with Fluid Breath Anticipation, Speed Boost & Spray Weave!
-      const dragonTime = simTime + boostPhaseAccum;
-      const skelGreen = buildDragonSkeleton(DRAGON_CONFIGS.green, dragonTime, sGreen, aimW, swimBoost, poseGreen.active ? poseGreen : null);
-      const skelWhite = buildDragonSkeleton(DRAGON_CONFIGS.white, dragonTime, sWhite, aimW, swimBoost, poseWhite.active ? poseWhite : null);
-      const skelBlack = buildDragonSkeleton(DRAGON_CONFIGS.black, dragonTime, sBlack, aimW, swimBoost, poseBlack.active ? poseBlack : null);
+      if (playing) {
+        const pairList = [
+          [DRAGON_CONFIGS.green, poseGreen.active ? poseGreen.swimBoost : 0],
+          [DRAGON_CONFIGS.white, poseWhite.active ? poseWhite.swimBoost : 0],
+          [DRAGON_CONFIGS.black, poseBlack.active ? poseBlack.swimBoost : 0]
+        ];
+        for (const [cfg, tgtBoost] of pairList) {
+          cfg.bBoostSmooth += (tgtBoost - cfg.bBoostSmooth) * Math.min(1, dt * 8.0);
+          const fMult = 1.0 + cfg.bBoostSmooth * 0.14 + boostRamp * 0.42 + swimBoost * 0.12;
+          cfg.swimPhase += dt * cfg.swimFreq * fMult;
+          cfg.vertPhase += dt * cfg.swimFreq * 0.78 * fMult;
+          cfg.limbPhase += dt * (1.0 + boostRamp * 0.85 + cfg.bBoostSmooth * 0.25);
+        }
+      }
+      const skelGreen = buildDragonSkeleton(DRAGON_CONFIGS.green, sGreen, aimW, swimBoost, poseGreen.active ? poseGreen : null);
+      const skelWhite = buildDragonSkeleton(DRAGON_CONFIGS.white, sWhite, aimW, swimBoost, poseWhite.active ? poseWhite : null);
+      const skelBlack = buildDragonSkeleton(DRAGON_CONFIGS.black, sBlack, aimW, swimBoost, poseBlack.active ? poseBlack : null);
 
       const gHead = skelGreen.pos[0], gFwd = skelGreen.fwd[0], gRight = skelGreen.right[0], gUp = skelGreen.up[0];
       const wHead = skelWhite.pos[0], wFwd = skelWhite.fwd[0], wRight = skelWhite.right[0], wUp = skelWhite.up[0];
@@ -3836,17 +3899,16 @@
       const camRight = norm3(cross(camFwd, [0, 1, 0]));
       const camUp = cross(camRight, camFwd);
 
-      const lightEye = [basePreset.sunDir[0] * 75, basePreset.sunDir[1] * 75 + 10, basePreset.sunDir[2] * 75];
-      const lightVP = mat4Mul(mat4Ortho(-48, 48, -46, 48, 5, 175), mat4LookAt(lightEye, [0, 10, 0], [0, 1, 0]));
+      const lightEye = [basePreset.sunDir[0] * 84, basePreset.sunDir[1] * 84 + 12, basePreset.sunDir[2] * 84];
+      const lightVP = mat4Mul(mat4Ortho(-56, 56, -54, 56, 5, 190), mat4LookAt(lightEye, [0, 12, 0], [0, 1, 0]));
 
       // Build Dynamic Voxel & Translucent Atmospheric Instances
       instCount = 0;
       wxCount = 0;
 
-      // 1. Draw ALL THREE LUMINESCENT DRAGONS + Mythical Imperial Fire Phoenix!
-      drawDragon(skelGreen, DRAGON_STYLES.green, jawOpenGreen, simTime, boostRamp);
-      drawDragon(skelWhite, DRAGON_STYLES.white, jawOpenWhite, simTime + 1.1, boostRamp);
-      drawDragon(skelBlack, DRAGON_STYLES.black, jawOpenBlack, simTime + 2.3, boostRamp);
+      drawDragon(skelGreen, DRAGON_STYLES.green, jawOpenGreen, DRAGON_CONFIGS.green.limbPhase, boostRamp);
+      drawDragon(skelWhite, DRAGON_STYLES.white, jawOpenWhite, DRAGON_CONFIGS.white.limbPhase, boostRamp);
+      drawDragon(skelBlack, DRAGON_STYLES.black, jawOpenBlack, DRAGON_CONFIGS.black.limbPhase, boostRamp);
 
       const nightGlowMult = currentTimeMode === 'night' ? 1.58 : 1.0;
       const phMarks = drawPhoenix(phPos, phFwd, phStancePitch, phRoll, phWingSpread, phWingFlap, phHeadYaw, phHeadPitch, phoenixJawOpen, phFlyIntensity, simTime, nightGlowMult, boostRamp);
@@ -4164,21 +4226,21 @@
       // 5. Boat, Drawbridge Cables, Banners, Braziers, Waterfalls, Weather, Lanterns, Clouds, Sea of Clouds, Cranes
       const boatBob = Math.sin(simTime * 2.2) * 0.14;
       const boatQ = quatFromBasis([0.92, boatBob * 0.15, 0.38], Math.sin(simTime * 1.8) * 0.06);
-      const bx = -14.5 * VS, by = 8.4 * VS + boatBob, bz = 34.5 * VS;
-      pushBox(bx, by, bz, boatQ, 1.35, 0.45, 3.10, [0.46, 0.28, 0.14], 0, 4.0);
-      pushBox(bx, by + 0.42, bz - 0.2, boatQ, 1.15, 0.65, 1.35, [0.68, 0.52, 0.34], 0, 4.0);
-      pushBox(bx + 0.55, by + 0.62, bz + 1.45, boatQ, 0.35, 0.45, 0.35, [1.0, 0.72, 0.24], 2.2, 5.0);
+      const bx = -27 * VS, by = 14.5 * VS + boatBob, bz = 62 * VS;
+      pushBox(bx, by, bz, boatQ, 1.45, 0.45, 3.25, [0.46, 0.28, 0.14], 0, 4.0);
+      pushBox(bx, by + 0.42, bz - 0.2, boatQ, 1.20, 0.65, 1.40, [0.68, 0.52, 0.34], 0, 4.0);
+      pushBox(bx + 0.58, by + 0.62, bz + 1.50, boatQ, 0.34, 0.42, 0.34, [1.0, 0.72, 0.24], 2.0, 5.0);
 
-      pushCable([-4 * VS, 23 * VS, 27.5 * VS], [-4 * VS, 11.5 * VS, 40.5 * VS], [0.20, 0.18, 0.16]);
-      pushCable([4 * VS, 23 * VS, 27.5 * VS], [4 * VS, 11.5 * VS, 40.5 * VS], [0.20, 0.18, 0.16]);
+      pushCable([-7 * VS, 40 * VS, 53 * VS], [-7 * VS, 19 * VS, 75 * VS], [0.20, 0.18, 0.16]);
+      pushCable([7 * VS, 40 * VS, 53 * VS], [7 * VS, 19 * VS, 75 * VS], [0.20, 0.18, 0.16]);
 
-      for (const bxx of [-9 * VS, 9 * VS]) {
+      for (const bxx of [-16 * VS, 16 * VS]) {
         for (let seg = 0; seg < 4; seg++) {
           const sway = Math.sin(simTime * 4.5 - seg * 0.9 + bxx) * 0.16 * (seg + 1) * 0.45;
-          pushBox(bxx, (30.0 - seg * 1.4) * VS, 9.6 * VS + sway, ID_Q, 0.72, 0.72, 0.14, seg === 3 ? [0.95, 0.74, 0.24] : [0.84, 0.16, 0.16], 0, 5.0);
+          pushBox(bxx, (52.0 - seg * 2.2) * VS, 17.0 * VS + sway, ID_Q, 0.76, 0.76, 0.14, seg === 3 ? [0.95, 0.74, 0.24] : [0.84, 0.16, 0.16], 0, 5.0);
         }
       }
-      for (const [fx, fy, fz] of [[-35, 20, 18], [-46, 33, 9]]) {
+      for (const [fx, fy, fz] of [[-64, 36, 32], [-84, 58, 16]]) {
         pushBox(fx * VS, (fy + 2) * VS, fz * VS, ID_Q, 0.18, 2.8, 0.18, [0.35, 0.22, 0.14], 0, 4.0);
         const sway = Math.sin(simTime * 4.2 + fx) * 0.18;
         pushBox(fx * VS + 0.45, (fy + 3) * VS, fz * VS + sway, ID_Q, 0.72, 1.05, 0.14, [0.86, 0.16, 0.16], 0, 5.0);
@@ -4186,18 +4248,18 @@
       for (let i = 0; i < BRAZIERS.length; i++) {
         const [tx, ty, tz] = BRAZIERS[i];
         const fl = 0.42 + 0.20 * Math.sin(simTime * 12.5 + i * 2.1);
-        pushBox(tx, ty + 0.32, tz, ID_Q, fl, fl * 1.45, fl, [1.0, 0.65, 0.18], 2.4, 5.0);
+        pushBox(tx, ty + 0.32, tz, ID_Q, fl, fl * 1.45, fl, [1.0, 0.65, 0.18], 2.1, 5.0);
       }
 
-      const allWaterXs = [-23, -22, -21, -20, -17, -16, -15, -14, -11, -10, -9, -8, -4, -3, -2, -1];
+      const allWaterXs = [-43, -41, -39, -32, -30, -28, -22, -20, -18, -10, -8, -6];
       for (let i = 0; i < 42; i++) {
         const wx = allWaterXs[i % allWaterXs.length] * VS, cycle = ((simTime * 1.55 + i * 0.17) % 1.0);
-        pushBox(wx, (8.2 - cycle * 34) * VS, 43.3 * VS + Math.sin(cycle * Math.PI) * 0.32, ID_Q, 0.36, 0.85, 0.24, [0.90, 0.98, 1.0], 0.22, 5.0);
+        pushBox(wx, (14.5 - cycle * 55) * VS, 76.2 * VS + Math.sin(cycle * Math.PI) * 0.32, ID_Q, 0.36, 0.88, 0.24, [0.90, 0.98, 1.0], 0.22, 5.0);
       }
       for (let i = 0; i < 40; i++) {
-        const mx = (-26 + (i % 10) * 4.6 + Math.sin(simTime * 0.75 + i) * 1.2) * VS;
-        const mz = (39 + Math.floor(i / 10) * 4.4 + Math.cos(simTime * 0.65 + i) * 1.0) * VS;
-        const my = (-24.0 + Math.sin(simTime * 1.2 + i * 1.3) * 0.9) * VS, sz = 1.9 + (i % 3) * 0.7;
+        const mx = (-46 + (i % 10) * 8.0 + Math.sin(simTime * 0.75 + i) * 1.6) * VS;
+        const mz = (68 + Math.floor(i / 10) * 7.6 + Math.cos(simTime * 0.65 + i) * 1.4) * VS;
+        const my = (-40.0 + Math.sin(simTime * 1.2 + i * 1.3) * 1.2) * VS, sz = 2.0 + (i % 3) * 0.7;
         pushBox(mx, my, mz, ID_Q, sz, sz * 0.65, sz, [0.95, 0.98, 1.0], 0.08, 5.0);
       }
 
@@ -4314,12 +4376,12 @@
       pushDynLight(blackMid[0], blackMid[1], blackMid[2], 1.15 * f0 * drLightB, 0.22 * f0 * drLightB, 1.95 * f0 * drLightB, 850.0);
       pushDynLight(whiteMid[0], whiteMid[1], whiteMid[2], 0.55 * f1 * frostBoost * whiteLightB, 1.45 * f1 * frostBoost * whiteLightB, 1.85 * f1 * frostBoost * whiteLightB, 850.0);
       pushDynLight(phPos[0], phPos[1] + 2.0, phPos[2], (2.4 + boostRamp * 2.8) * phBoost * f0, (1.15 - boostRamp * 0.45) * phBoost * f0, (0.28 - boostRamp * 0.12) * phBoost * f0, 880.0);
-      pushDynLight(-27 * VS, 36 * VS, 27 * VS, 1.4 * torchMult * f0, 0.72 * torchMult * f0, 0.22 * torchMult * f0, 280.0);
-      pushDynLight(27 * VS, 38 * VS, 27 * VS, 1.4 * torchMult * f1, 0.72 * torchMult * f1, 0.22 * torchMult * f1, 280.0);
-      pushDynLight(46 * VS, 21 * VS, 6 * VS, 1.5 * torchMult * f1, 0.76 * torchMult * f1, 0.24 * torchMult * f1, 280.0);
-      pushDynLight(54 * VS, 46 * VS, -48 * VS, 1.5 * torchMult * f0, 0.76 * torchMult * f0, 0.24 * torchMult * f0, 280.0);
-      pushDynLight(0, 66 * VS, -5 * VS, 1.7 * torchMult * f0, 0.88 * torchMult * f0, 0.28 * torchMult * f0, 280.0);
-      pushDynLight(0, 23 * VS, 27 * VS, 1.2 * torchMult * f1, 0.62 * torchMult * f1, 0.18 * torchMult * f1, 280.0);
+      pushDynLight(-52 * VS, 65 * VS, 52 * VS, 1.4 * torchMult * f0, 0.72 * torchMult * f0, 0.22 * torchMult * f0, 320.0);
+      pushDynLight( 52 * VS, 69 * VS, 52 * VS, 1.4 * torchMult * f1, 0.72 * torchMult * f1, 0.22 * torchMult * f1, 320.0);
+      pushDynLight( 83 * VS, 40 * VS, 10 * VS, 1.5 * torchMult * f1, 0.76 * torchMult * f1, 0.24 * torchMult * f1, 320.0);
+      pushDynLight( 90 * VS, 80 * VS, -82 * VS, 1.5 * torchMult * f0, 0.76 * torchMult * f0, 0.24 * torchMult * f0, 320.0);
+      pushDynLight(0, 118 * VS, -10 * VS, 1.7 * torchMult * f0, 0.88 * torchMult * f0, 0.28 * torchMult * f0, 340.0);
+      pushDynLight(0, 42 * VS, 56 * VS, 1.3 * torchMult * f1, 0.68 * torchMult * f1, 0.20 * torchMult * f1, 320.0);
       if (convBoost > 0.01) pushDynLight(CONVERGE_POINT[0], CONVERGE_POINT[1], CONVERGE_POINT[2], 2.8 * convBoost, 2.2 * convBoost, 2.8 * convBoost, 920.0);
       if (fireInt > 0.01) pushDynLight(gMouth[0] + gFwd[0] * 6, gMouth[1] + gFwd[1] * 6, gMouth[2] + gFwd[2] * 6, 3.0 * fireInt * f0, 1.35 * fireInt * f0, 0.28 * fireInt * f0, 780.0);
       if (isFiringBlack) pushDynLight(bHead[0] + bFwd[0] * 6, bHead[1] + bFwd[1] * 6, bHead[2] + bFwd[2] * 6, 2.6 * f1, 1.4 * f1, 3.4 * f1, 780.0);
@@ -4445,12 +4507,12 @@
       gl.viewport(0, 0, bloomW, bloomH);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, sceneGlowTex);
       gl.uniform1i(uBlur.uTex, 0);
-      gl.uniform2f(uBlur.uDir, 1.85 / bloomW, 0.0);
+      gl.uniform2f(uBlur.uDir, 1.05 / bloomW, 0.0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO2);
       gl.bindTexture(gl.TEXTURE_2D, bloomTex1);
-      gl.uniform2f(uBlur.uDir, 0.0, 1.85 / bloomH);
+      gl.uniform2f(uBlur.uDir, 0.0, 1.05 / bloomH);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
