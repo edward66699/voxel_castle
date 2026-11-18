@@ -3,8 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cổ Thành &amp; Tam Long 3D</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
+    :root {
+      --background: #090e1a;
+      --foreground: #e2e8f0;
+      --card: #0f172a;
+      --card-border: rgba(148, 163, 184, 0.25);
+      --border: rgba(148, 163, 184, 0.28);
+      --primary: #2563eb;
+      --primary-foreground: #ffffff;
+      --secondary: #1e293b;
+      --secondary-foreground: #f1f5f9;
+      --muted-foreground: #94a3b8;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--background);
+      color: var(--foreground);
+      overflow: hidden;
+    }
+    #app {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 6px 8px;
+      gap: 6px;
+      box-sizing: border-box;
+    }
+    #stage {
+      flex: 1 1 0%;
+      min-height: 260px;
+      width: 100%;
+    }
     canvas { touch-action: none; }
     .pill-btn {
       transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
@@ -21,22 +58,22 @@
     }
   </style>
 </head>
-<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
-  <div class="py-1 space-y-1.5 select-none">
-    <div id="stage" class="relative w-full rounded-xl overflow-hidden border border-[var(--card-border)] bg-[var(--card)]" style="height: 362px;">
+<body class="antialiased p-0 m-0">
+  <div id="app" class="select-none">
+    <div id="stage" class="relative w-full rounded-xl overflow-hidden border border-[var(--card-border)] bg-[var(--card)]">
       <canvas id="glcanvas" class="block w-full h-full cursor-grab active:cursor-grabbing"></canvas>
 
-      <div class="pointer-events-none absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-sm text-white/95 text-xs border border-white/15">
+      <div class="pointer-events-none absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 text-white/95 text-xs border border-white/15">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span class="font-medium">Cổ Thành &amp; Tam Long</span>
-        <span id="voxel-badge" class="text-white/75 font-mono text-[11px] pl-1 border-l border-white/20">Đang dựng khối...</span>
+        <span id="voxel-badge" class="text-white/80 font-mono text-[11px] pl-1 border-l border-white/20">Đang dựng khối...</span>
       </div>
 
-      <button id="btn-fs" title="Toàn màn hình" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-black/50 hover:bg-black/75 backdrop-blur-sm text-white/95 text-[11px] border border-white/15 transition">
+      <button id="btn-fs" title="Toàn màn hình" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
         Phóng to
       </button>
 
-      <div class="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-white/90 text-[11px] border border-white/15">
+      <div class="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/80 text-white/90 text-[11px] border border-white/15">
         <span class="text-white/70">Theo:</span>
         <button data-follow="green" class="follow-btn px-1.5 rounded font-medium bg-emerald-600 text-white transition">Thanh Long</button>
         <button data-follow="white" class="follow-btn px-1.5 rounded font-medium text-cyan-200 hover:bg-white/15 transition">Bạch Long</button>
@@ -44,12 +81,12 @@
         <button data-follow="phoenix" class="follow-btn px-1.5 rounded font-medium text-amber-300 hover:bg-white/15 transition">Phượng Hoàng</button>
       </div>
 
-      <div class="pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/50 backdrop-blur-sm text-white/85 text-[11px] border border-white/10">
+      <div class="pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15">
         F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc
       </div>
     </div>
 
-    <div class="space-y-1 text-[11px] px-0.5">
+    <div class="space-y-1 text-[11px] px-0.5 shrink-0">
       <div class="flex flex-wrap items-center justify-between gap-1">
         <div class="flex items-center gap-1 flex-wrap">
           <span class="text-[var(--muted-foreground)]">Sáng:</span>
@@ -600,7 +637,7 @@
     void main() {
       vec2 p[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
       vUV = p[gl_VertexID] * 0.5 + 0.5;
-      gl_Position = vec4(p[gl_VertexID], 0.9999, 1.0);
+      gl_Position = vec4(p[gl_VertexID], 0.99999, 1.0);
     }`;
 
     const skyFS = `#version 300 es
@@ -705,6 +742,8 @@
     uniform float uLightning;
     uniform vec3 uLightPos[13];
     uniform vec3 uLightCol[13];
+    uniform float uLightRange[13];
+    uniform int uLightCount;
     uniform sampler2D uShadowMap;
     uniform float uUseShadow;
 
@@ -714,27 +753,27 @@
       return fract((p.x + p.y) * p.z);
     }
 
-    float computeShadow(vec3 shadowCoord, vec3 N, vec3 L) {
+    float computeShadow(vec3 shadowCoord, float geomNdl) {
       if (uUseShadow < 0.5) return 1.0;
+      if (geomNdl <= 0.01) return 0.0;
       if (shadowCoord.x < 0.01 || shadowCoord.x > 0.99 || shadowCoord.y < 0.01 || shadowCoord.y > 0.99 || shadowCoord.z > 0.999) return 1.0;
-      float ndl = max(dot(N, L), 0.0);
-      float bias = max(0.0016 * (1.0 - ndl), 0.00055);
-      vec2 texel = vec2(1.0 / 2048.0);
+      float bias = max(0.0018 * (1.0 - geomNdl), 0.0006);
+      vec2 texel = vec2(1.0 / 1280.0);
+      float refZ = shadowCoord.z - bias;
       float sum = 0.0;
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          float d = texture(uShadowMap, shadowCoord.xy + vec2(float(x), float(y)) * texel).r;
-          sum += (shadowCoord.z - bias <= d) ? 1.0 : 0.0;
-        }
-      }
-      return sum / 9.0;
+      sum += (refZ <= texture(uShadowMap, shadowCoord.xy + vec2(-0.62, -0.32) * texel).r) ? 1.0 : 0.0;
+      sum += (refZ <= texture(uShadowMap, shadowCoord.xy + vec2( 0.32, -0.62) * texel).r) ? 1.0 : 0.0;
+      sum += (refZ <= texture(uShadowMap, shadowCoord.xy + vec2(-0.32,  0.62) * texel).r) ? 1.0 : 0.0;
+      sum += (refZ <= texture(uShadowMap, shadowCoord.xy + vec2( 0.62,  0.32) * texel).r) ? 1.0 : 0.0;
+      return sum * 0.25;
     }
 
     void computeVoxelShading(
       vec3 worldPos, vec3 inN, vec3 baseCol, float ao, float emissive, vec2 uv, float style, vec3 shadowCoord,
       out vec3 outColor, out vec3 outGlow
     ) {
-      float edgeDist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+      vec2 cuv = fract(uv * 0.99998);
+      float edgeDist = min(min(cuv.x, 1.0 - cuv.x), min(cuv.y, 1.0 - cuv.y));
       float isWater = (emissive < -0.5) ? 1.0 : 0.0;
       float bevel = mix(mix(0.80, 1.04, smoothstep(0.0, 0.08, edgeDist)), 1.0, isWater);
 
@@ -750,6 +789,10 @@
         outGlow = baseCol * clamp((emissive - 0.45) * 0.80, 0.0, 1.95);
         return;
       }
+
+      vec3 camVec = uCamPos - worldPos;
+      float dist = length(camVec);
+      bool nearDetail = dist < 118.0;
 
       if (isWater > 0.5) {
         if (inN.y > 0.5) {
@@ -775,56 +818,58 @@
           specBoost = 0.65;
           waterGlow = clamp(streak * 0.22 + mistSpray * 0.18, 0.0, 0.35);
         }
-      } else if (style < 0.5) {
-        float strata = hash31(floor(vec3(worldPos.x * 2.5, worldPos.y * 0.85, worldPos.z * 2.5)));
-        float crack = smoothstep(0.0, 0.14, abs(fract(worldPos.y * 1.4 + strata * 0.5) - 0.5));
-        col += (strata - 0.5) * 0.12;
-        microAO = mix(0.72, 1.05, crack);
-        N = normalize(inN + vec3(strata - 0.5, 0.15 * (crack - 0.5), strata - 0.5) * 0.26);
-      } else if (style < 1.5) {
-        float row = floor(uv.y * 3.0);
-        float bu = fract(uv.x * 2.0 + mod(row, 2.0) * 0.5);
-        float bv = fract(uv.y * 3.0);
-        float mortar = min(min(bu, 1.0 - bu), min(bv, 1.0 - bv));
-        float brickTone = hash31(floor(worldPos * 4.4) + vec3(row, 0.0, 0.0));
-        col += (brickTone - 0.5) * 0.09;
-        microAO = mix(0.73, 1.06, smoothstep(0.0, 0.12, mortar));
-        N = normalize(inN + vec3(bu - 0.5, bv - 0.5, 0.0) * 0.14);
-      } else if (style < 2.5) {
-        float ribU = fract(uv.x * 3.0);
-        float ribV = fract(uv.y * 3.0);
-        float ridgeShadow = smoothstep(0.0, 0.18, ribV) * smoothstep(0.0, 0.15, min(ribU, 1.0 - ribU));
-        col *= mix(0.75, 1.10, ridgeShadow);
-        N = normalize(inN + vec3((ribU - 0.5) * 0.28, (ribV - 0.5) * 0.22, 0.0));
-        specBoost = 0.28;
-      } else if (style < 3.5) {
-        float leaf = hash31(floor(worldPos * 5.5));
-        col += (leaf - 0.5) * 0.14;
-        microAO = mix(0.82, 1.08, leaf);
-      } else if (style < 4.5) {
-        float plank = fract(uv.x * 4.0);
-        float grain = hash31(floor(vec3(worldPos.x * 6.0, worldPos.y * 2.0, worldPos.z * 6.0)));
-        col += (grain - 0.5) * 0.07;
-        microAO = mix(0.76, 1.04, smoothstep(0.0, 0.12, min(plank, 1.0 - plank)));
-      } else if (style > 6.5) {
-        float su = fract(uv.x * 2.0 + floor(uv.y * 2.0) * 0.5);
-        float sv = fract(uv.y * 2.0);
-        float scaleEdge = min(min(su, 1.0 - su), min(sv, 1.0 - sv));
-        microAO = mix(0.78, 1.08, smoothstep(0.0, 0.18, scaleEdge));
-        specBoost = 0.30;
+      } else if (nearDetail) {
+        if (style < 0.5) {
+          float strata = hash31(floor(vec3(worldPos.x * 2.5, worldPos.y * 0.85, worldPos.z * 2.5)));
+          float crack = smoothstep(0.0, 0.14, abs(fract(worldPos.y * 1.4 + strata * 0.5) - 0.5));
+          col += (strata - 0.5) * 0.12;
+          microAO = mix(0.72, 1.05, crack);
+          N = normalize(inN + vec3(strata - 0.5, 0.15 * (crack - 0.5), strata - 0.5) * 0.26);
+        } else if (style < 1.5) {
+          float row = floor(cuv.y * 3.0);
+          float bu = fract(cuv.x * 2.0 + mod(row, 2.0) * 0.5);
+          float bv = fract(cuv.y * 3.0);
+          float mortar = min(min(bu, 1.0 - bu), min(bv, 1.0 - bv));
+          float brickTone = hash31(floor(worldPos * 4.4) + vec3(row, 0.0, 0.0));
+          col += (brickTone - 0.5) * 0.09;
+          microAO = mix(0.73, 1.06, smoothstep(0.0, 0.12, mortar));
+          N = normalize(inN + vec3(bu - 0.5, bv - 0.5, 0.0) * 0.14);
+        } else if (style < 2.5) {
+          float ribU = fract(cuv.x * 3.0);
+          float ribV = fract(cuv.y * 3.0);
+          float ridgeShadow = smoothstep(0.0, 0.18, ribV) * smoothstep(0.0, 0.15, min(ribU, 1.0 - ribU));
+          col *= mix(0.75, 1.10, ridgeShadow);
+          N = normalize(inN + vec3((ribU - 0.5) * 0.28, (ribV - 0.5) * 0.22, 0.0));
+          specBoost = 0.28;
+        } else if (style < 3.5) {
+          float leaf = hash31(floor(worldPos * 5.5));
+          col += (leaf - 0.5) * 0.14;
+          microAO = mix(0.82, 1.08, leaf);
+        } else if (style < 4.5) {
+          float plank = fract(cuv.x * 4.0);
+          float grain = hash31(floor(vec3(worldPos.x * 6.0, worldPos.y * 2.0, worldPos.z * 6.0)));
+          col += (grain - 0.5) * 0.07;
+          microAO = mix(0.76, 1.04, smoothstep(0.0, 0.12, min(plank, 1.0 - plank)));
+        } else if (style > 6.5) {
+          float su = fract(cuv.x * 2.0 + floor(cuv.y * 2.0) * 0.5);
+          float sv = fract(cuv.y * 2.0);
+          float scaleEdge = min(min(su, 1.0 - su), min(sv, 1.0 - sv));
+          microAO = mix(0.78, 1.08, smoothstep(0.0, 0.18, scaleEdge));
+          specBoost = 0.30;
+        }
       }
 
       if (uRainWetness > 0.01 && isWater < 0.5 && style < 6.5) {
-        float rainStreak = sin(worldPos.y * 2.6 + uTime * 16.0 + hash31(vec3(floor(worldPos.xz * 2.2), 1.0)) * 6.28);
-        float wallSheen = (1.0 - abs(inN.y)) * smoothstep(0.20, 0.95, rainStreak) * 0.24 * uRainWetness;
-        float puddle = smoothstep(0.60, 0.95, inN.y) * smoothstep(0.38, 0.72, sin(worldPos.x * 0.45) * cos(worldPos.z * 0.45) + 0.52);
+        float rainStreak = nearDetail ? sin(worldPos.y * 2.6 + uTime * 16.0 + hash31(vec3(floor(worldPos.xz * 2.2), 1.0)) * 6.28) : 0.0;
+        float wallSheen = nearDetail ? (1.0 - abs(inN.y)) * smoothstep(0.20, 0.95, rainStreak) * 0.24 * uRainWetness : 0.0;
+        float puddle = nearDetail ? smoothstep(0.60, 0.95, inN.y) * smoothstep(0.38, 0.72, sin(worldPos.x * 0.45) * cos(worldPos.z * 0.45) + 0.52) : 0.0;
         col *= mix(1.0, 0.72, uRainWetness);
         col = mix(col, vec3(0.42, 0.55, 0.72), wallSheen + puddle * 0.28 * uRainWetness);
         specBoost += (0.72 + puddle * 0.70) * uRainWetness;
       }
       if (uSnowCover > 0.01 && style < 6.5) {
         if (isWater < 0.5) {
-          float snNoise = hash31(floor(worldPos * 2.8));
+          float snNoise = nearDetail ? hash31(floor(worldPos * 2.8)) : 0.5;
           float topMask = smoothstep(0.05, 0.58, inN.y + (snNoise - 0.38) * 0.45);
           float sideFrost = smoothstep(-0.2, 0.6, -inN.x * 0.5 + inN.z * 0.35 + (snNoise - 0.5) * 0.7) * 0.50;
           float treeCap = (style > 2.5 && style < 3.5) ? smoothstep(-0.35, 0.25, inN.y + snNoise * 0.35) * 0.90 : 0.0;
@@ -840,7 +885,8 @@
       }
 
       vec3 L = normalize(uSunDir);
-      float shadow = computeShadow(shadowCoord, inN, L);
+      float geomNdl = dot(inN, L);
+      float shadow = computeShadow(shadowCoord, geomNdl);
       float ndl = max(dot(N, L), 0.0);
       float wrap = max((dot(N, L) + 0.28) / 1.28, 0.0);
       vec3 dirLight = uSunColor * (ndl * 0.94 * shadow + wrap * 0.14 * mix(0.28, 1.0, shadow));
@@ -850,29 +896,33 @@
       vec3 amb = uAmbientColor * mix(0.55, 1.15, hemi);
 
       vec3 ptLight = vec3(0.0);
-      for (int i = 0; i < 13; i++) {
-        vec3 d = uLightPos[i] - worldPos;
-        float dist2 = dot(d, d);
-        float range = (i <= 2 || i >= 9) ? 0.014 : 0.052;
-        float atten = 1.0 / (1.0 + range * dist2 + 0.0010 * dist2 * dist2);
-        vec3 ld = normalize(d);
-        float pndl = max(dot(N, ld) * 0.68 + 0.32, 0.0);
-        ptLight += uLightCol[i] * atten * pndl;
+      if (nearDetail) {
+        for (int i = 0; i < 13; i++) {
+          if (i >= uLightCount) break;
+          vec3 d = uLightPos[i] - worldPos;
+          float dist2 = dot(d, d);
+          float rInfo = uLightRange[i];
+          if (dist2 < rInfo) {
+            float range = (rInfo > 500.0) ? 0.014 : 0.052;
+            float atten = 1.0 / (1.0 + range * dist2 + 0.0010 * dist2 * dist2);
+            float pndl = max(dot(N, d) * inversesqrt(max(dist2, 0.0001)) * 0.68 + 0.32, 0.0);
+            ptLight += uLightCol[i] * atten * pndl;
+          }
+        }
       }
 
-      vec3 V = normalize(uCamPos - worldPos);
+      vec3 V = camVec / max(dist, 0.0001);
       vec3 H = normalize(L + V);
       float spec = pow(max(dot(N, H), 0.0), 42.0) * (0.06 + specBoost) * shadow;
-      float fresnel = pow(1.0 - max(dot(inN, V), 0.0), 3.2);
-      float waterFres = fresnel * isWater * 0.45;
-      vec3 rimDir = normalize(vec3(-0.85, 0.22, -0.45));
-      float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * max(dot(N, rimDir) * 0.6 + 0.4, 0.0) * (1.0 - isWater);
+      float oneMinusNV = 1.0 - max(dot(inN, V), 0.0);
+      float waterFres = oneMinusNV * oneMinusNV * oneMinusNV * isWater * 0.45;
+      float rimNV = 1.0 - max(dot(N, V), 0.0);
+      float rim = rimNV * rimNV * rimNV * max(dot(N, vec3(-0.8617, 0.2230, -0.4562)) * 0.6 + 0.4, 0.0) * (1.0 - isWater);
       vec3 rimLight = uSunColor * rim * 0.24 * mix(0.45, 1.0, shadow);
 
       vec3 bounceFill = vec3(0.08, 0.06, 0.05) * (0.5 - 0.5 * N.y);
       vec3 lit = clamp(col, 0.0, 1.0) * (amb + bounceFill + dirLight + flashLight + ptLight) * ao * microAO * bevel + uSunColor * spec + rimLight + mix(uFogHorizon, vec3(0.42, 0.70, 0.92), 0.55) * waterFres;
 
-      float dist = length(uCamPos - worldPos);
       float canyonMist = exp(-max(worldPos.y + 8.5, 0.0) * 0.34) * 0.78;
       float distFog = clamp(1.0 - exp(-pow(max(dist - (82.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
       float fogAmt = clamp(canyonMist + distFog, 0.0, 0.92);
@@ -1099,21 +1149,12 @@
     in vec2 vUV;
     uniform sampler2D uScene;
     uniform sampler2D uBloom;
-    uniform vec2 uTexel;
     out vec4 fragColor;
     vec3 aces(vec3 x) {
       return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
     }
     void main() {
-      vec3 center = texture(uScene, vUV).rgb;
-      vec3 blurN = (
-        texture(uScene, vUV + vec2(uTexel.x, 0.0)).rgb +
-        texture(uScene, vUV - vec2(uTexel.x, 0.0)).rgb +
-        texture(uScene, vUV + vec2(0.0, uTexel.y)).rgb +
-        texture(uScene, vUV - vec2(0.0, uTexel.y)).rgb
-      ) * 0.25;
-      vec3 sharp = max(center + (center - blurN) * 0.28, 0.0);
-      vec3 col = sharp + texture(uBloom, vUV).rgb * 0.92;
+      vec3 col = texture(uScene, vUV).rgb + texture(uBloom, vUV).rgb * 0.92;
       col = aces(col * 1.08);
       vec2 q = vUV - 0.5;
       col *= 1.0 - dot(q, q) * 0.22;
@@ -1128,6 +1169,21 @@
     const wxProg = createProgram(wxVS, wxFS);
     const blurProg = createProgram(quadVS, blurFS);
     const compProg = createProgram(quadVS, compFS);
+
+    function getUniforms(prog, names) {
+      const m = {};
+      for (const n of names) m[n] = gl.getUniformLocation(prog, n);
+      return m;
+    }
+    const uSky = getUniforms(skyProg, ['uSkyTop','uSkyMid','uSkyHorizon','uSunDir','uSunColor','uStarAmount','uSunVis','uLightning','uCrimsonGlow','uTime','uCamRight','uCamUp','uCamFwd','uTanHalfFov','uAspect']);
+    const uShSt = getUniforms(shadowStaticProg, ['uLightVP']);
+    const uShIn = getUniforms(shadowInstProg, ['uLightVP']);
+    const sceneUniformNames = ['uProj','uView','uLightVP','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uRainWetness','uSnowCover','uFogDensity','uLightning','uLightPos[0]','uLightCol[0]','uLightRange[0]','uLightCount','uShadowMap','uUseShadow'];
+    const uSt = getUniforms(staticProg, sceneUniformNames);
+    const uIn = getUniforms(instProg, sceneUniformNames);
+    const uWx = getUniforms(wxProg, ['uProj','uView','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uFogDensity','uLightning']);
+    const uBlur = getUniforms(blurProg, ['uTex','uDir']);
+    const uComp = getUniforms(compProg, ['uScene','uBloom']);
 
     // ---------- Ultra-Fine Voxel Grid (176 x 124 x 176, VS = 0.48) ----------
     const VS = 0.48;
@@ -1561,18 +1617,18 @@
     const UV_QUAD = [[0,0], [1,0], [1,1], [0,1]];
 
     function isOpaque(x, y, z) { const m = getV(x, y, z); return m !== 0 && m !== 20; }
-    function vertexAO(x, y, z, n, u, v, su, sv) {
-      if (getV(x, y, z) === 20) return 1.0;
-      const nx = x + n[0], ny = y + n[1], nz = z + n[2];
-      const s1 = isOpaque(nx + u[0] * su, ny + u[1] * su, nz + u[2] * su) ? 1 : 0;
-      const s2 = isOpaque(nx + v[0] * sv, ny + v[1] * sv, nz + v[2] * sv) ? 1 : 0;
-      const c  = isOpaque(nx + u[0] * su + v[0] * sv, ny + u[1] * su + v[1] * sv, nz + u[2] * su + v[2] * sv) ? 1 : 0;
-      const occ = (s1 && s2) ? 3 : (s1 + s2 + c);
-      return 1.0 - occ * 0.20;
+    function vertexOcc(m, x, y, z, nx, ny, nz, ux, uy, uz, vx, vy, vz, su, sv) {
+      if (m === 20) return 0;
+      const bx = x + nx, by = y + ny, bz = z + nz;
+      const s1 = isOpaque(bx + ux * su, by + uy * su, bz + uz * su) ? 1 : 0;
+      const s2 = isOpaque(bx + vx * sv, by + vy * sv, bz + vz * sv) ? 1 : 0;
+      if (s1 && s2) return 3;
+      const c = isOpaque(bx + ux * su + vx * sv, by + uy * su + vy * sv, bz + uz * su + vz * sv) ? 1 : 0;
+      return s1 + s2 + c;
     }
 
     const FLOATS_PER_VERT = 14;
-    let vCap = 524288;
+    let vCap = 262144;
     let staticBuf = new Float32Array(vCap * FLOATS_PER_VERT);
     let staticVertexCount = 0;
 
@@ -1593,28 +1649,97 @@
     }
 
     let voxelCount = 0;
-    for (let y = -OY; y < GY - OY; y++) {
-      for (let z = -OZ; z < GZ - OZ; z++) {
-        for (let x = -OX; x < GX - OX; x++) {
-          const m = getV(x, y, z);
-          if (!m) continue;
-          voxelCount++;
-          const mat = MATS[m];
-          for (const f of FACES) {
-            const nx = x + f.dir[0], ny = y + f.dir[1], nz = z + f.dir[2];
-            const nm = getV(nx, ny, nz);
-            if (nm !== 0 && !(m !== 20 && nm === 20)) continue;
-            if (m === 20 && nm === 20) continue;
-            const aos = [
-              vertexAO(x, y, z, f.dir, f.uAxis, f.vAxis, -1, -1),
-              vertexAO(x, y, z, f.dir, f.uAxis, f.vAxis,  1, -1),
-              vertexAO(x, y, z, f.dir, f.uAxis, f.vAxis,  1,  1),
-              vertexAO(x, y, z, f.dir, f.uAxis, f.vAxis, -1,  1)
-            ];
-            const triIdx = (aos[0] + aos[2] > aos[1] + aos[3]) ? [0, 1, 2, 0, 2, 3] : [1, 2, 3, 1, 3, 0];
+    for (let i = 0; i < grid.length; i++) if (grid[i]) voxelCount++;
+
+    const dims = [GX, GY, GZ], offs = [OX, OY, OZ];
+    const sliceMask = new Int32Array(Math.max(GX, GY, GZ) * Math.max(GX, GY, GZ));
+    const qPos = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    const qUV = [[0, 0], [0, 0], [0, 0], [0, 0]];
+    const qAO = [1, 1, 1, 1];
+    const cCoord = [0, 0, 0];
+
+    for (const fi of [2, 4, 0, 1, 5, 3]) {
+      const f = FACES[fi];
+      const fnx = f.dir[0], fny = f.dir[1], fnz = f.dir[2];
+      const fux = f.uAxis[0], fuy = f.uAxis[1], fuz = f.uAxis[2];
+      const fvx = f.vAxis[0], fvy = f.vAxis[1], fvz = f.vAxis[2];
+      const dDim = fnx !== 0 ? 0 : (fny !== 0 ? 1 : 2);
+      const uDim = fux !== 0 ? 0 : (fuy !== 0 ? 1 : 2);
+      const vDim = fvx !== 0 ? 0 : (fvy !== 0 ? 1 : 2);
+      const dSign = f.dir[dDim], uStep = f.uAxis[uDim], vStep = f.vAxis[vDim];
+      const nd = dims[dDim], nu = dims[uDim], nv = dims[vDim];
+      const uStart = uStep > 0 ? 0 : nu - 1, vStart = vStep > 0 ? 0 : nv - 1;
+      const dStart = dSign > 0 ? nd - 1 : 0, dEnd = dSign > 0 ? -1 : nd, dInc = dSign > 0 ? -1 : 1;
+      const fc0 = f.corners[0];
+
+      for (let dIdx = dStart; dIdx !== dEnd; dIdx += dInc) {
+        cCoord[dDim] = dIdx - offs[dDim];
+        let anyFace = false;
+        for (let sv = 0; sv < nv; sv++) {
+          cCoord[vDim] = vStart + vStep * sv - offs[vDim];
+          const rowOff = sv * nu;
+          for (let su = 0; su < nu; su++) {
+            cCoord[uDim] = uStart + uStep * su - offs[uDim];
+            const gx = cCoord[0], gy = cCoord[1], gz = cCoord[2];
+            const m = getV(gx, gy, gz);
+            if (!m) { sliceMask[rowOff + su] = 0; continue; }
+            const nm = getV(gx + fnx, gy + fny, gz + fnz);
+            if ((nm !== 0 && !(m !== 20 && nm === 20)) || (m === 20 && nm === 20)) {
+              sliceMask[rowOff + su] = 0;
+              continue;
+            }
+            const o0 = vertexOcc(m, gx, gy, gz, fnx, fny, fnz, fux, fuy, fuz, fvx, fvy, fvz, -1, -1);
+            const o1 = vertexOcc(m, gx, gy, gz, fnx, fny, fnz, fux, fuy, fuz, fvx, fvy, fvz,  1, -1);
+            const o2 = vertexOcc(m, gx, gy, gz, fnx, fny, fnz, fux, fuy, fuz, fvx, fvy, fvz,  1,  1);
+            const o3 = vertexOcc(m, gx, gy, gz, fnx, fny, fnz, fux, fuy, fuz, fvx, fvy, fvz, -1,  1);
+            sliceMask[rowOff + su] = (m & 0xFF) | (o0 << 8) | (o1 << 10) | (o2 << 12) | (o3 << 14);
+            anyFace = true;
+          }
+        }
+        if (!anyFace) continue;
+
+        for (let sv = 0; sv < nv; sv++) {
+          for (let su = 0; su < nu; su++) {
+            const key = sliceMask[sv * nu + su];
+            if (!key) continue;
+            let w = 1;
+            while (su + w < nu && sliceMask[sv * nu + su + w] === key) w++;
+            let h = 1;
+            outerH: while (sv + h < nv) {
+              const rOff = (sv + h) * nu + su;
+              for (let k = 0; k < w; k++) if (sliceMask[rOff + k] !== key) break outerH;
+              h++;
+            }
+            for (let yk = 0; yk < h; yk++) {
+              const cOff = (sv + yk) * nu + su;
+              for (let xk = 0; xk < w; xk++) sliceMask[cOff + xk] = 0;
+            }
+
+            const m = key & 0xFF, mat = MATS[m];
+            qAO[0] = 1.0 - ((key >> 8) & 3) * 0.20;
+            qAO[1] = 1.0 - ((key >> 10) & 3) * 0.20;
+            qAO[2] = 1.0 - ((key >> 12) & 3) * 0.20;
+            qAO[3] = 1.0 - ((key >> 14) & 3) * 0.20;
+
+            cCoord[dDim] = dIdx - offs[dDim];
+            cCoord[uDim] = uStart + uStep * su - offs[uDim];
+            cCoord[vDim] = vStart + vStep * sv - offs[vDim];
+            const px = (cCoord[0] + fc0[0] - 0.5) * VS;
+            const py = (cCoord[1] + fc0[1] - 0.5) * VS;
+            const pz = (cCoord[2] + fc0[2] - 0.5) * VS;
+            const wuX = fux * w * VS, wuY = fuy * w * VS, wuZ = fuz * w * VS;
+            const hvX = fvx * h * VS, hvY = fvy * h * VS, hvZ = fvz * h * VS;
+            qPos[0][0] = px;            qPos[0][1] = py;            qPos[0][2] = pz;
+            qPos[1][0] = px + wuX;      qPos[1][1] = py + wuY;      qPos[1][2] = pz + wuZ;
+            qPos[2][0] = px + wuX + hvX; qPos[2][1] = py + wuY + hvY; qPos[2][2] = pz + wuZ + hvZ;
+            qPos[3][0] = px + hvX;      qPos[3][1] = py + hvY;      qPos[3][2] = pz + hvZ;
+            qUV[1][0] = w; qUV[1][1] = 0;
+            qUV[2][0] = w; qUV[2][1] = h;
+            qUV[3][0] = 0; qUV[3][1] = h;
+
+            const triIdx = (qAO[0] + qAO[2] > qAO[1] + qAO[3]) ? [0, 1, 2, 0, 2, 3] : [1, 2, 3, 1, 3, 0];
             for (const ti of triIdx) {
-              const c = f.corners[ti], uv = UV_QUAD[ti];
-              pushVert((x + c[0] - 0.5) * VS, (y + c[1] - 0.5) * VS, (z + c[2] - 0.5) * VS, f.dir[0], f.dir[1], f.dir[2], uv[0], uv[1], mat.rgb[0], mat.rgb[1], mat.rgb[2], aos[ti], mat.em, mat.st);
+              pushVert(qPos[ti][0], qPos[ti][1], qPos[ti][2], fnx, fny, fnz, qUV[ti][0], qUV[ti][1], mat.rgb[0], mat.rgb[1], mat.rgb[2], qAO[ti], mat.em, mat.st);
             }
           }
         }
@@ -1623,6 +1748,7 @@
 
     function addWorldBox(cx, cy, cz, sx, sy, sz, rgb, ao = 1.0, st = 0, em = 0.0) {
       for (const f of FACES) {
+        if (f.dir[1] < -0.5 && cy < -10) continue;
         for (const ti of [0, 1, 2, 0, 2, 3]) {
           const c = f.corners[ti], uv = UV_QUAD[ti];
           pushVert(cx + (c[0] - 0.5) * sx, cy + (c[1] - 0.5) * sy, cz + (c[2] - 0.5) * sz, f.dir[0], f.dir[1], f.dir[2], uv[0], uv[1], rgb[0], rgb[1], rgb[2], ao, em, st);
@@ -1803,14 +1929,25 @@
     const quadVAO = gl.createVertexArray();
 
     // ---------- Shadow & MRT FBOs ----------
-    const SHADOW_RES = 2048;
-    const shadowTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, shadowTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, SHADOW_RES, SHADOW_RES, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const SHADOW_RES = 1280;
+    function makeDepthTex(res) {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, res, res, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    }
+    const staticShadowTex = makeDepthTex(SHADOW_RES);
+    const staticShadowFBO = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, staticShadowFBO);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, staticShadowTex, 0);
+    gl.drawBuffers([gl.NONE]);
+    let cachedShadowMode = null;
+
+    const shadowTex = makeDepthTex(SHADOW_RES);
     const shadowFBO = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, shadowTex, 0);
@@ -1834,8 +1971,8 @@
     function rebuildFramebuffers(w, h) {
       if (fboW === w && fboH === h) return;
       fboW = w; fboH = h;
-      bloomW = Math.max(2, Math.floor(w / 3));
-      bloomH = Math.max(2, Math.floor(h / 3));
+      bloomW = Math.max(2, Math.floor(w / 4));
+      bloomH = Math.max(2, Math.floor(h / 4));
       if (sceneFBO) {
         gl.deleteFramebuffer(sceneFBO); gl.deleteTexture(sceneColTex); gl.deleteTexture(sceneGlowTex); gl.deleteRenderbuffer(sceneDepthRB);
         gl.deleteFramebuffer(bloomFBO1); gl.deleteTexture(bloomTex1); gl.deleteFramebuffer(bloomFBO2); gl.deleteTexture(bloomTex2);
@@ -2510,18 +2647,37 @@
 
     const togglePlayBtn = document.getElementById('toggle-play');
     togglePlayBtn.addEventListener('click', () => { playing = !playing; togglePlayBtn.textContent = playing ? 'Tạm dừng' : 'Tiếp tục'; });
+    const voxelLabel = `${voxelCount.toLocaleString('vi-VN')} khối · Tam Long`;
+    const timerExt = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    const pendingGpuQ = [];
+    let dynResScale = 1.0, gpuMsSmooth = 8.0, lastScaleAdjust = 0;
+    let fpsFrames = 0, fpsAccumMs = 0, shownFps = 60, lastRafMs = performance.now(), rafDtSmooth = 16.6;
+    const MAX_RENDER_PIXELS = 1220000;
+
     const btnFs = document.getElementById('btn-fs');
     btnFs.addEventListener('click', () => { if (!document.fullscreenElement) stage.requestFullscreen?.(); else document.exitFullscreen?.(); });
-    document.addEventListener('fullscreenchange', () => { btnFs.textContent = document.fullscreenElement ? 'Thu nhỏ' : 'Phóng to'; });
+    document.addEventListener('fullscreenchange', () => {
+      btnFs.textContent = document.fullscreenElement ? 'Thu nhỏ' : 'Phóng to';
+      requestAnimationFrame(resize);
+    });
 
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.max(2, Math.floor(canvas.clientWidth * dpr));
-      const h = Math.max(2, Math.floor(canvas.clientHeight * dpr));
+      const cw = canvas.clientWidth, ch = canvas.clientHeight;
+      if (cw < 2 || ch < 2) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      let w = cw * dpr * dynResScale;
+      let h = ch * dpr * dynResScale;
+      if (w * h > MAX_RENDER_PIXELS) {
+        const cap = Math.sqrt(MAX_RENDER_PIXELS / (w * h));
+        w *= cap; h *= cap;
+      }
+      w = Math.max(2, Math.floor(w));
+      h = Math.max(2, Math.floor(h));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       rebuildFramebuffers(w, h);
     }
     window.addEventListener('resize', resize);
+    if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(stage);
     resize();
 
     // ---------- Instanced Push Helpers ----------
@@ -3155,14 +3311,71 @@
       return { chestCore: [hipC[0] + fwd[0] * 1.6, hipC[1] + fwd[1] * 1.6, hipC[2] + fwd[2] * 1.6], hipC, shoulders, wingMids, wingTips, tailPoints };
     }
 
-    // ---------- Main Render Loop ----------
-    let lastRealTime = null, boostPhaseAccum = 0;
+    const SNOW_QUATS = Array.from({ length: 24 }, () => [0, 0, 0, 1]);
+    const lightPosBuf = new Float32Array(39);
+    const lightColBuf = new Float32Array(39);
+    const lightRangeBuf = new Float32Array(13);
+
+    let lastRealTime = null, boostPhaseAccum = 0, perfFrameIdx = 0;
     function frame(now) {
+      const realWallMs = now - lastRafMs;
+      lastRafMs = now;
+      if (perfFrameIdx < 2) {
+        fpsFrames = 0;
+        fpsAccumMs = 0;
+      } else if (realWallMs > 1.0 && realWallMs < 150.0) {
+        rafDtSmooth = rafDtSmooth * 0.88 + realWallMs * 0.12;
+        fpsFrames++;
+        fpsAccumMs += realWallMs;
+        if (fpsAccumMs >= 500) {
+          shownFps = Math.round((fpsFrames * 1000) / fpsAccumMs);
+          fpsFrames = 0;
+          fpsAccumMs = 0;
+          voxelBadge.textContent = `${voxelLabel} · ${shownFps} FPS`;
+        }
+      }
+
+      let activeGpuQ = null;
+      if (timerExt) {
+        while (pendingGpuQ.length > 0) {
+          const qp = pendingGpuQ[0];
+          if (!gl.getQueryParameter(qp, gl.QUERY_RESULT_AVAILABLE)) break;
+          pendingGpuQ.shift();
+          const ns = gl.getQueryParameter(qp, gl.QUERY_RESULT);
+          gl.deleteQuery(qp);
+          if (ns > 0 && ns < 250000000) {
+            gpuMsSmooth = gpuMsSmooth * 0.78 + (ns * 1e-6) * 0.22;
+            if (now - lastScaleAdjust > 850) {
+              if (gpuMsSmooth > 12.2 && dynResScale > 0.58) {
+                dynResScale = Math.max(0.58, +(dynResScale - 0.08).toFixed(2));
+                lastScaleAdjust = now;
+                resize();
+              } else if (gpuMsSmooth < 7.0 && dynResScale < 1.0 && now - lastScaleAdjust > 1800) {
+                dynResScale = Math.min(1.0, +(dynResScale + 0.04).toFixed(2));
+                lastScaleAdjust = now;
+                resize();
+              }
+            }
+          }
+        }
+        if (perfFrameIdx >= 2 && (perfFrameIdx & 3) === 0 && pendingGpuQ.length < 3) {
+          activeGpuQ = gl.createQuery();
+          gl.beginQuery(timerExt.TIME_ELAPSED_EXT, activeGpuQ);
+        }
+      } else if (now - lastScaleAdjust > 1000 && perfFrameIdx > 18) {
+        if (rafDtSmooth > 18.0 && dynResScale > 0.58) {
+          dynResScale = Math.max(0.58, +(dynResScale - 0.08).toFixed(2));
+          lastScaleAdjust = now;
+          resize();
+        }
+      }
+      perfFrameIdx++;
+
       const dt = lastRealTime === null ? 0.016 : clamp((now - lastRealTime) * 0.001, 0.0, 0.05);
       lastRealTime = now;
       if (playing) simTime += dt;
 
-      resize();
+      if (fboW < 2 || fboH < 2) resize();
       const basePreset = PRESETS[currentTimeMode];
 
       if (boostTime >= 0 && playing) {
@@ -3990,22 +4203,26 @@
 
       if (currentWeather === 'storm' || currentWeather === 'snow') {
         const posMod = (v, m) => ((v % m) + m) % m;
+        const cfX = camFwd[0], cfY = camFwd[1], cfZ = camFwd[2];
+        const ex = eye[0], ey = eye[1], ez = eye[2];
         if (currentWeather === 'storm') {
           const windQ = quatFromBasis([0.24, -0.96, 0.12], 0);
-          for (const p of weatherParticles) {
+          for (let i = 0; i < weatherParticles.length; i++) {
+            const p = weatherParticles[i];
             const half = p.span * 0.5;
             const rx = -half + posMod(p.x + simTime * 11.5 + half, p.span);
-            const rz = -half + posMod(p.z + simTime * 5.8 + half, p.span);
             const ry = 60 - posMod((60 - p.y) + simTime * 44.0 * p.speed, 76);
+            const rz = -half + posMod(p.z + simTime * 5.8 + half, p.span);
+            if ((rx - ex) * cfX + (ry - ey) * cfY + (rz - ez) * cfZ < -4.0) continue;
             const needleLen = 3.15 + (p.speed - 0.78) * 1.65;
             const wThick = p.span < 160 ? 0.056 : 0.048;
             pushWxBox(rx, ry, rz, windQ, wThick, wThick, needleLen, [0.82, 0.91, 1.00], p.span < 160 ? 0.62 : 0.48, 0.0);
           }
-          // Translucent droplet splash ripple rings across rooftops, stairs, terraces & cliff ledges
           for (let i = 0; i < 180; i++) {
             const spT = (simTime * 3.3 + i * 0.19) % 1.0;
             const sx = ((hash3(i, 91, 1) - 0.5) * 165), sz = ((hash3(i, 92, 2) - 0.5) * 165);
             const sy = (Math.abs(sx) < 20 && Math.abs(sz) < 20 ? 14 : -13 + (i % 5) * 4.8) + 0.12;
+            if ((sx - ex) * cfX + (sy - ey) * cfY + (sz - ez) * cfZ < -3.0) continue;
             const ssz = 0.28 + spT * 0.44;
             pushWxBox(sx, sy, sz, ID_Q, ssz, 0.08, ssz, [0.82, 0.92, 1.0], 0.46 * (1 - spT), 1.0);
           }
@@ -4016,15 +4233,19 @@
             }
           }
         } else {
-          // 100% Fixed World-Space 3D Snowfall (completely decoupled from camera eye/orientation!)
-          for (const p of weatherParticles) {
+          for (let q = 0; q < 24; q++) {
+            const ph = (q / 24) * 6.2831853;
+            SNOW_QUATS[q] = quatFromBasis([Math.cos(ph + simTime), 0.6, Math.sin(ph + simTime)], ph + simTime * 1.8);
+          }
+          for (let i = 0; i < weatherParticles.length; i++) {
+            const p = weatherParticles[i];
             const half = p.span * 0.5;
             const sx = -half + posMod(p.x + Math.sin(simTime * 1.45 + p.phase) * 3.8 + simTime * 1.25 + half, p.span);
-            const sz = -half + posMod(p.z + Math.cos(simTime * 1.25 + p.phase) * 3.8 + simTime * 0.65 + half, p.span);
             const sy = 60 - posMod((60 - p.y) + simTime * 4.4 * p.speed, 76);
+            const sz = -half + posMod(p.z + Math.cos(simTime * 1.25 + p.phase) * 3.8 + simTime * 0.65 + half, p.span);
+            if ((sx - ex) * cfX + (sy - ey) * cfY + (sz - ez) * cfZ < -4.0) continue;
             const szCube = 0.19 + (p.speed - 0.78) * 0.14;
-            const sq = quatFromBasis([Math.cos(p.phase + simTime), 0.6, Math.sin(p.phase + simTime)], p.phase + simTime * 1.8);
-            pushWxBox(sx, sy, sz, sq, szCube, szCube, szCube, [0.99, 1.00, 1.00], 0.96, 2.0);
+            pushWxBox(sx, sy, sz, SNOW_QUATS[i % 24], szCube, szCube, szCube, [0.99, 1.00, 1.00], 0.96, 2.0);
           }
         }
       }
@@ -4078,140 +4299,144 @@
       const frostBoost = isFiringWhite ? 2.1 : 1.0;
       const phBoost = ((phoenixTime >= 0 ? 1.4 : 1.0) + boostRamp * 1.65) * nightGlowMult;
 
-      const lightPos = new Float32Array([
-        pearlPos[0], pearlPos[1], pearlPos[2],
-        blackMid[0], blackMid[1], blackMid[2],
-        whiteMid[0], whiteMid[1], whiteMid[2],
-        -27 * VS, 36 * VS, 27 * VS,
-        27 * VS, 38 * VS, 27 * VS,
-        46 * VS, 21 * VS, 6 * VS,
-        54 * VS, 46 * VS, -48 * VS,
-        0, 66 * VS, -5 * VS,
-        0, 23 * VS, 27 * VS,
-        CONVERGE_POINT[0], CONVERGE_POINT[1], CONVERGE_POINT[2],
-        gMouth[0] + gFwd[0] * 6, gMouth[1] + gFwd[1] * 6, gMouth[2] + gFwd[2] * 6,
-        bHead[0] + bFwd[0] * 6, bHead[1] + bFwd[1] * 6, bHead[2] + bFwd[2] * 6,
-        phPos[0], phPos[1] + 2.0, phPos[2]
-      ]);
+      let lightCount = 0;
+      function pushDynLight(px, py, pz, r, g, b, maxR2) {
+        if (lightCount >= 13 || r + g + b < 0.015) return;
+        const o = lightCount * 3;
+        lightPosBuf[o] = px; lightPosBuf[o + 1] = py; lightPosBuf[o + 2] = pz;
+        lightColBuf[o] = r; lightColBuf[o + 1] = g; lightColBuf[o + 2] = b;
+        lightRangeBuf[lightCount] = maxR2;
+        lightCount++;
+      }
       const drLightB = 1.0 + boostRamp * 1.45;
       const whiteLightB = 1.0 + boostRamp * 0.45;
-      const lightCol = new Float32Array([
-        (2.10 + convBoost) * drLightB, (1.65 + convBoost) * drLightB, (0.68 + convBoost) * drLightB,
-        1.15 * f0 * drLightB, 0.22 * f0 * drLightB, 1.95 * f0 * drLightB,
-        0.55 * f1 * frostBoost * whiteLightB, 1.45 * f1 * frostBoost * whiteLightB, 1.85 * f1 * frostBoost * whiteLightB,
-        1.4 * torchMult * f0, 0.72 * torchMult * f0, 0.22 * torchMult * f0,
-        1.4 * torchMult * f1, 0.72 * torchMult * f1, 0.22 * torchMult * f1,
-        1.5 * torchMult * f1, 0.76 * torchMult * f1, 0.24 * torchMult * f1,
-        1.5 * torchMult * f0, 0.76 * torchMult * f0, 0.24 * torchMult * f0,
-        1.7 * torchMult * f0, 0.88 * torchMult * f0, 0.28 * torchMult * f0,
-        1.2 * torchMult * f1, 0.62 * torchMult * f1, 0.18 * torchMult * f1,
-        2.8 * convBoost, 2.2 * convBoost, 2.8 * convBoost,
-        3.0 * fireInt * f0, 1.35 * fireInt * f0, 0.28 * fireInt * f0,
-        2.6 * (isFiringBlack ? f1 : 0), 1.4 * (isFiringBlack ? f1 : 0), 3.4 * (isFiringBlack ? f1 : 0),
-        (2.4 + boostRamp * 2.8) * phBoost * f0, (1.15 - boostRamp * 0.45) * phBoost * f0, (0.28 - boostRamp * 0.12) * phBoost * f0 // Molten Lava / Fire Phoenix Blaze Light
-      ]);
+      pushDynLight(pearlPos[0], pearlPos[1], pearlPos[2], (2.10 + convBoost) * drLightB, (1.65 + convBoost) * drLightB, (0.68 + convBoost) * drLightB, 850.0);
+      pushDynLight(blackMid[0], blackMid[1], blackMid[2], 1.15 * f0 * drLightB, 0.22 * f0 * drLightB, 1.95 * f0 * drLightB, 850.0);
+      pushDynLight(whiteMid[0], whiteMid[1], whiteMid[2], 0.55 * f1 * frostBoost * whiteLightB, 1.45 * f1 * frostBoost * whiteLightB, 1.85 * f1 * frostBoost * whiteLightB, 850.0);
+      pushDynLight(phPos[0], phPos[1] + 2.0, phPos[2], (2.4 + boostRamp * 2.8) * phBoost * f0, (1.15 - boostRamp * 0.45) * phBoost * f0, (0.28 - boostRamp * 0.12) * phBoost * f0, 880.0);
+      pushDynLight(-27 * VS, 36 * VS, 27 * VS, 1.4 * torchMult * f0, 0.72 * torchMult * f0, 0.22 * torchMult * f0, 280.0);
+      pushDynLight(27 * VS, 38 * VS, 27 * VS, 1.4 * torchMult * f1, 0.72 * torchMult * f1, 0.22 * torchMult * f1, 280.0);
+      pushDynLight(46 * VS, 21 * VS, 6 * VS, 1.5 * torchMult * f1, 0.76 * torchMult * f1, 0.24 * torchMult * f1, 280.0);
+      pushDynLight(54 * VS, 46 * VS, -48 * VS, 1.5 * torchMult * f0, 0.76 * torchMult * f0, 0.24 * torchMult * f0, 280.0);
+      pushDynLight(0, 66 * VS, -5 * VS, 1.7 * torchMult * f0, 0.88 * torchMult * f0, 0.28 * torchMult * f0, 280.0);
+      pushDynLight(0, 23 * VS, 27 * VS, 1.2 * torchMult * f1, 0.62 * torchMult * f1, 0.18 * torchMult * f1, 280.0);
+      if (convBoost > 0.01) pushDynLight(CONVERGE_POINT[0], CONVERGE_POINT[1], CONVERGE_POINT[2], 2.8 * convBoost, 2.2 * convBoost, 2.8 * convBoost, 920.0);
+      if (fireInt > 0.01) pushDynLight(gMouth[0] + gFwd[0] * 6, gMouth[1] + gFwd[1] * 6, gMouth[2] + gFwd[2] * 6, 3.0 * fireInt * f0, 1.35 * fireInt * f0, 0.28 * fireInt * f0, 780.0);
+      if (isFiringBlack) pushDynLight(bHead[0] + bFwd[0] * 6, bHead[1] + bFwd[1] * 6, bHead[2] + bFwd[2] * 6, 2.6 * f1, 1.4 * f1, 3.4 * f1, 780.0);
 
-      // ---------- PASS 1: Shadow Depth Pass ----------
+      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+      if (cachedShadowMode !== currentTimeMode) {
+        cachedShadowMode = currentTimeMode;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, staticShadowFBO);
+        gl.viewport(0, 0, SHADOW_RES, SHADOW_RES);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.useProgram(shadowStaticProg);
+        gl.uniformMatrix4fv(uShSt.uLightVP, false, lightVP);
+        gl.bindVertexArray(staticVAO);
+        gl.drawArrays(gl.TRIANGLES, 0, staticVertexCount);
+      }
+
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, staticShadowFBO);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, shadowFBO);
+      gl.blitFramebuffer(0, 0, SHADOW_RES, SHADOW_RES, 0, 0, SHADOW_RES, SHADOW_RES, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
       gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
       gl.viewport(0, 0, SHADOW_RES, SHADOW_RES);
-      gl.clear(gl.DEPTH_BUFFER_BIT);
-      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
-
-      gl.useProgram(shadowStaticProg);
-      gl.uniformMatrix4fv(gl.getUniformLocation(shadowStaticProg, 'uLightVP'), false, lightVP);
-      gl.bindVertexArray(staticVAO);
-      gl.drawArrays(gl.TRIANGLES, 0, staticVertexCount);
-
       gl.useProgram(shadowInstProg);
-      gl.uniformMatrix4fv(gl.getUniformLocation(shadowInstProg, 'uLightVP'), false, lightVP);
+      gl.uniformMatrix4fv(uShIn.uLightVP, false, lightVP);
       gl.bindVertexArray(instVAO);
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, instCount);
 
-      // ---------- PASS 2: Main MRT Scene Render ----------
       gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFBO);
       gl.viewport(0, 0, fboW, fboH);
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
-
-      gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
-      gl.useProgram(skyProg);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uSkyTop'), skyTop);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uSkyMid'), skyMid);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uSkyHorizon'), skyHorizon);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uSunDir'), basePreset.skySunDir);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uSunColor'), sunColor);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uStarAmount'), starAmt);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uSunVis'), sunVis);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uLightning'), activeLightning);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uCrimsonGlow'), crimsonSky);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uTime'), simTime);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uCamRight'), camRight);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uCamUp'), camUp);
-      gl.uniform3fv(gl.getUniformLocation(skyProg, 'uCamFwd'), camFwd);
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uTanHalfFov'), Math.tan(fov * 0.5));
-      gl.uniform1f(gl.getUniformLocation(skyProg, 'uAspect'), aspect);
-      gl.bindVertexArray(quadVAO);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-      gl.clear(gl.DEPTH_BUFFER_BIT);
-      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, shadowTex);
 
-      function bindSceneUniforms(prog) {
-        gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'uProj'), false, proj);
-        gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'uView'), false, view);
-        gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'uLightVP'), false, lightVP);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uSunDir'), basePreset.sunDir);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uSunColor'), sunColor);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uAmbientColor'), ambient);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uFogColor'), fog);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uFogHorizon'), fogHorizon);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uCamPos'), eye);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uTime'), simTime);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uRainWetness'), rainWetSmooth);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uSnowCover'), snowCoverSmooth);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uFogDensity'), fogDensSmooth);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uLightning'), activeLightning);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uLightPos[0]'), lightPos);
-        gl.uniform3fv(gl.getUniformLocation(prog, 'uLightCol[0]'), lightCol);
-        gl.uniform1i(gl.getUniformLocation(prog, 'uShadowMap'), 0);
-        gl.uniform1f(gl.getUniformLocation(prog, 'uUseShadow'), currentWeather === 'storm' ? 0.45 : 1.0);
+      const useSh = currentWeather === 'storm' ? 0.45 : 1.0;
+      function bindSceneUniforms(u) {
+        gl.uniformMatrix4fv(u.uProj, false, proj);
+        gl.uniformMatrix4fv(u.uView, false, view);
+        gl.uniformMatrix4fv(u.uLightVP, false, lightVP);
+        gl.uniform3fv(u.uSunDir, basePreset.sunDir);
+        gl.uniform3fv(u.uSunColor, sunColor);
+        gl.uniform3fv(u.uAmbientColor, ambient);
+        gl.uniform3fv(u.uFogColor, fog);
+        gl.uniform3fv(u.uFogHorizon, fogHorizon);
+        gl.uniform3fv(u.uCamPos, eye);
+        gl.uniform1f(u.uTime, simTime);
+        gl.uniform1f(u.uRainWetness, rainWetSmooth);
+        gl.uniform1f(u.uSnowCover, snowCoverSmooth);
+        gl.uniform1f(u.uFogDensity, fogDensSmooth);
+        gl.uniform1f(u.uLightning, activeLightning);
+        gl.uniform3fv(u['uLightPos[0]'], lightPosBuf);
+        gl.uniform3fv(u['uLightCol[0]'], lightColBuf);
+        gl.uniform1fv(u['uLightRange[0]'], lightRangeBuf);
+        gl.uniform1i(u.uLightCount, lightCount);
+        gl.uniform1i(u.uShadowMap, 0);
+        gl.uniform1f(u.uUseShadow, useSh);
       }
 
+      gl.useProgram(instProg);
+      bindSceneUniforms(uIn);
+      gl.bindVertexArray(instVAO);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, instCount);
+
       gl.useProgram(staticProg);
-      bindSceneUniforms(staticProg);
+      bindSceneUniforms(uSt);
       gl.bindVertexArray(staticVAO);
       gl.drawArrays(gl.TRIANGLES, 0, staticVertexCount);
 
-      gl.useProgram(instProg);
-      bindSceneUniforms(instProg);
-      gl.bindVertexArray(instVAO);
-      gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, instCount);
+      gl.depthFunc(gl.LEQUAL);
+      gl.depthMask(false);
+      gl.disable(gl.CULL_FACE);
+      gl.useProgram(skyProg);
+      gl.uniform3fv(uSky.uSkyTop, skyTop);
+      gl.uniform3fv(uSky.uSkyMid, skyMid);
+      gl.uniform3fv(uSky.uSkyHorizon, skyHorizon);
+      gl.uniform3fv(uSky.uSunDir, basePreset.skySunDir);
+      gl.uniform3fv(uSky.uSunColor, sunColor);
+      gl.uniform1f(uSky.uStarAmount, starAmt);
+      gl.uniform1f(uSky.uSunVis, sunVis);
+      gl.uniform1f(uSky.uLightning, activeLightning);
+      gl.uniform1f(uSky.uCrimsonGlow, crimsonSky);
+      gl.uniform1f(uSky.uTime, simTime);
+      gl.uniform3fv(uSky.uCamRight, camRight);
+      gl.uniform3fv(uSky.uCamUp, camUp);
+      gl.uniform3fv(uSky.uCamFwd, camFwd);
+      gl.uniform1f(uSky.uTanHalfFov, Math.tan(fov * 0.5));
+      gl.uniform1f(uSky.uAspect, aspect);
+      gl.bindVertexArray(quadVAO);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.depthFunc(gl.LESS);
+      gl.depthMask(true);
 
       if (wxCount > 0) {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
+        gl.enable(gl.CULL_FACE);
         gl.useProgram(wxProg);
-        gl.uniformMatrix4fv(gl.getUniformLocation(wxProg, 'uProj'), false, proj);
-        gl.uniformMatrix4fv(gl.getUniformLocation(wxProg, 'uView'), false, view);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uSunDir'), basePreset.sunDir);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uSunColor'), sunColor);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uAmbientColor'), ambient);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uFogColor'), fog);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uFogHorizon'), fogHorizon);
-        gl.uniform3fv(gl.getUniformLocation(wxProg, 'uCamPos'), eye);
-        gl.uniform1f(gl.getUniformLocation(wxProg, 'uTime'), simTime);
-        gl.uniform1f(gl.getUniformLocation(wxProg, 'uFogDensity'), fogDensSmooth);
-        gl.uniform1f(gl.getUniformLocation(wxProg, 'uLightning'), activeLightning);
+        gl.uniformMatrix4fv(uWx.uProj, false, proj);
+        gl.uniformMatrix4fv(uWx.uView, false, view);
+        gl.uniform3fv(uWx.uSunDir, basePreset.sunDir);
+        gl.uniform3fv(uWx.uSunColor, sunColor);
+        gl.uniform3fv(uWx.uAmbientColor, ambient);
+        gl.uniform3fv(uWx.uFogColor, fog);
+        gl.uniform3fv(uWx.uFogHorizon, fogHorizon);
+        gl.uniform3fv(uWx.uCamPos, eye);
+        gl.uniform1f(uWx.uTime, simTime);
+        gl.uniform1f(uWx.uFogDensity, fogDensSmooth);
+        gl.uniform1f(uWx.uLightning, activeLightning);
         gl.bindVertexArray(wxVAO);
         gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, wxCount);
         gl.depthMask(true);
         gl.disable(gl.BLEND);
       }
 
-      // ---------- PASS 3: Separable Bloom Blur ----------
       gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
       gl.useProgram(blurProg);
       gl.bindVertexArray(quadVAO);
@@ -4219,36 +4444,28 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO1);
       gl.viewport(0, 0, bloomW, bloomH);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, sceneGlowTex);
-      gl.uniform1i(gl.getUniformLocation(blurProg, 'uTex'), 0);
-      gl.uniform2f(gl.getUniformLocation(blurProg, 'uDir'), 1.35 / bloomW, 0.0);
+      gl.uniform1i(uBlur.uTex, 0);
+      gl.uniform2f(uBlur.uDir, 1.85 / bloomW, 0.0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO2);
       gl.bindTexture(gl.TEXTURE_2D, bloomTex1);
-      gl.uniform2f(gl.getUniformLocation(blurProg, 'uDir'), 0.0, 1.35 / bloomH);
+      gl.uniform2f(uBlur.uDir, 0.0, 1.85 / bloomH);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO1);
-      gl.bindTexture(gl.TEXTURE_2D, bloomTex2);
-      gl.uniform2f(gl.getUniformLocation(blurProg, 'uDir'), 2.5 / bloomW, 0.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFBO2);
-      gl.bindTexture(gl.TEXTURE_2D, bloomTex1);
-      gl.uniform2f(gl.getUniformLocation(blurProg, 'uDir'), 0.0, 2.5 / bloomH);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-      // ---------- PASS 4: Final Composite ----------
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, fboW, fboH);
       gl.useProgram(compProg);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, sceneColTex);
-      gl.uniform1i(gl.getUniformLocation(compProg, 'uScene'), 0);
+      gl.uniform1i(uComp.uScene, 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomTex2);
-      gl.uniform1i(gl.getUniformLocation(compProg, 'uBloom'), 1);
-      gl.uniform2f(gl.getUniformLocation(compProg, 'uTexel'), 1.0 / fboW, 1.0 / fboH);
+      gl.uniform1i(uComp.uBloom, 1);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
+      if (activeGpuQ) {
+        gl.endQuery(timerExt.TIME_ELAPSED_EXT);
+        pendingGpuQ.push(activeGpuQ);
+      }
       requestAnimationFrame(frame);
     }
 
