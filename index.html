@@ -2328,7 +2328,7 @@
       }
     }
 
-    buildTree(22, 17, 29, true); buildTree(-24, 17, 30, false); buildTree(-32, 17, -24, true); buildTree(23, 17, -23, true);
+    buildTree(22, 17, 29, true); buildTree(-24, 17, 30, false); buildTree(-38, 17, -28, true);
     buildTree(-72, 48, -14, false, 2); buildTree(-78, 53, 22, false, 2); buildTree(-108, 46, -16, false, 2);
     buildTree(-62, 36, 32, false, 1); buildTree(-110, 36, 18, false, 2);
     buildTree(68, 22, 34, true); buildTree(92, 24, 26, true); buildTree(74, 25, -18, false, 2);
@@ -4570,6 +4570,222 @@
       return { shellC, baseP, fwd, right, up, serpentHead: shEnd };
     }
 
+    const CASTLE_GUARDS = [
+      { id: 'Gate_L', vx: -5, vy: 17, vz: 59, yaw: 0.08, rank: 'captain', leftItem: 'lantern', phase: 0.2 },
+      { id: 'Gate_R', vx: 5, vy: 17, vz: 59, yaw: -0.08, rank: 'captain', leftItem: 'lantern', phase: 1.4 },
+      { id: 'Keep_L', vx: -7, vy: 17, vz: 18, yaw: 0.06, rank: 'captain', leftItem: 'lantern', phase: 2.1 },
+      { id: 'Keep_R', vx: 7, vy: 17, vz: 18, yaw: -0.06, rank: 'captain', leftItem: 'lantern', phase: 3.3 },
+      { id: 'Bridge_Patrol', vx: -4, vy: 17, vz: 24, z1: 43, speed: 1.50, rank: 'guard', leftItem: 'shield', phase: 0.8 },
+      { id: 'Courtyard_Patrol', vx: -15, vy: 17, vz: 22, z1: 40, speed: 1.32, rank: 'guard', leftItem: 'none', phase: 4.5 },
+      { id: 'Pier_Patrol', vx: -3, vy: 17, vz: 63, z1: 72, speed: 1.18, rank: 'guard', leftItem: 'lantern', phase: 2.7 },
+      { id: 'KeepTerr_L', vx: -24, vy: 56, vz: 4, yaw: -0.38, rank: 'guard', leftItem: 'shield', phase: 1.9 },
+      { id: 'KeepTerr_R', vx: 24, vy: 56, vz: 4, yaw: 0.38, rank: 'guard', leftItem: 'shield', phase: 3.8 },
+      { id: 'WestWall_S', vx: -52, vy: 40, vz: 16, yaw: -Math.PI * 0.5, rank: 'guard', leftItem: 'shield', phase: 0.5 },
+      { id: 'WestWall_N', vx: -52, vy: 40, vz: -16, yaw: -Math.PI * 0.5, rank: 'guard', leftItem: 'lantern', phase: 2.9 },
+      { id: 'EastWall_N', vx: 52, vy: 40, vz: -16, yaw: Math.PI * 0.5, rank: 'guard', leftItem: 'shield', phase: 4.1 },
+      { id: 'SouthWall_W', vx: -28, vy: 40, vz: 52, yaw: 0.0, rank: 'guard', leftItem: 'shield', phase: 1.1 },
+      { id: 'SouthWall_E', vx: 28, vy: 40, vz: 52, yaw: 0.0, rank: 'guard', leftItem: 'lantern', phase: 5.0 },
+      { id: 'SE_Tower', vx: 52, vy: 40, vz: 52, yaw: 0.78, rank: 'captain', leftItem: 'shield', phase: 2.4 },
+      { id: 'Pagoda_Sentry', vx: 84, vy: 24, vz: -64, yaw: 0.0, rank: 'guard', leftItem: 'lantern', phase: 3.6 }
+    ];
+
+    function drawGuards(time, nightGlowMult) {
+      const UP = [0, 1, 0];
+      const nightMix = clamp((nightGlowMult - 1.0) / 0.58, 0.0, 1.0);
+      const cSkin = [0.92, 0.76, 0.63];
+      const cVisor = [0.14, 0.16, 0.21];
+      const cSteel = [0.22, 0.27, 0.35];
+      const cArmor = [0.18, 0.24, 0.34];
+      const cCrimson = [0.76, 0.14, 0.15];
+      const cCapTrim = [0.94, 0.73, 0.22];
+      const cBronze = [0.76, 0.58, 0.22];
+      const cBoot = [0.14, 0.13, 0.15];
+      const cWood = [0.38, 0.21, 0.11];
+      const cBlade = [0.80, 0.85, 0.92];
+      const cTassel = [0.92, 0.16, 0.16];
+      const cLantern = [1.0, 0.74, 0.28];
+
+      function pitchBasis(r0, u0, f0, ang) {
+        const ca = Math.cos(ang), sa = Math.sin(ang);
+        return {
+          u: [u0[0] * ca - f0[0] * sa, u0[1] * ca - f0[1] * sa, u0[2] * ca - f0[2] * sa],
+          f: [f0[0] * ca + u0[0] * sa, f0[1] * ca + u0[1] * sa, f0[2] * ca + u0[2] * sa]
+        };
+      }
+
+      for (let gi = 0; gi < CASTLE_GUARDS.length; gi++) {
+        const g = CASTLE_GUARDS[gi];
+        let wx = g.vx * VS;
+        const footY = (g.vy + 0.5) * VS;
+        let wz = g.vz * VS;
+        let yaw = g.yaw || 0.0;
+        let walkWeight = 0.0;
+
+        if (g.z1 !== undefined) {
+          const zA = g.vz * VS, zB = g.z1 * VS;
+          const dist = Math.abs(zB - zA);
+          const walkDur = dist / (g.speed || 1.35);
+          const pauseDur = 1.05;
+          const halfT = walkDur + pauseDur;
+          const fullT = halfT * 2.0;
+          const cyc = ((time + g.phase * 1.9) % fullT + fullT) % fullT;
+          const yawForward = zB > zA ? 0.0 : Math.PI;
+          const yawBack = yawForward + Math.PI;
+
+          if (cyc < walkDur) {
+            const p = cyc / walkDur;
+            wz = mix(zA, zB, p);
+            yaw = yawForward;
+            walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p));
+          } else if (cyc < halfT) {
+            wz = zB;
+            const tp = smoothstep(0.18, 0.86, (cyc - walkDur) / pauseDur);
+            yaw = yawForward + Math.PI * tp;
+            walkWeight = 0.0;
+          } else if (cyc < halfT + walkDur) {
+            const p = (cyc - halfT) / walkDur;
+            wz = mix(zB, zA, p);
+            yaw = yawBack;
+            walkWeight = smoothstep(0.0, 0.09, p) * (1.0 - smoothstep(0.91, 1.0, p));
+          } else {
+            wz = zA;
+            const tp = smoothstep(0.18, 0.86, (cyc - halfT - walkDur) / pauseDur);
+            yaw = yawBack + Math.PI * tp;
+            walkWeight = 0.0;
+          }
+        }
+
+        const isCap = g.rank === 'captain';
+        const sc = isCap ? 1.06 : 1.00;
+        const cBody = isCap ? cCrimson : cArmor;
+        const cCrest = isCap ? cCapTrim : cBronze;
+
+        const bFwd = [Math.sin(yaw), 0.0, Math.cos(yaw)];
+        const bRight = [Math.cos(yaw), 0.0, -Math.sin(yaw)];
+        const bodyQ = quatFromFrame(bRight, UP, bFwd);
+
+        const stridePhase = time * 6.2 + g.phase * 3.1;
+        const bob = walkWeight * Math.abs(Math.sin(stridePhase)) * 0.055 * sc + (1.0 - walkWeight) * Math.sin(time * 2.1 + g.phase) * 0.012;
+        const legSwingAmp = walkWeight * 0.56;
+        const armSwingAmp = walkWeight * 0.42;
+
+        function gBox(px, py, pz, rVec, uVec, fVec, sx, sy, sz, col, em = 0.0, st = 5.0) {
+          pushBox(px, py, pz, quatFromFrame(rVec, uVec, fVec), sx * sc, sy * sc, sz * sc, col, em, st);
+        }
+        function bBox(fOff, rOff, uOff, sx, sy, sz, col, em = 0.0, st = 5.0, qOverride = bodyQ) {
+          pushBox(
+            wx + (bFwd[0] * fOff + bRight[0] * rOff) * sc,
+            footY + bob + uOff * sc,
+            wz + (bFwd[2] * fOff + bRight[2] * rOff) * sc,
+            qOverride, sx * sc, sy * sc, sz * sc, col, em, st
+          );
+        }
+
+        // Articulated Legs (Hip y = 0.88 -> Knee -> Boot resting flush at footY)
+        const hipY = footY + bob + 0.88 * sc;
+        for (const s of [-1, 1]) {
+          const swing = s * Math.sin(stridePhase) * legSwingAmp;
+          const thighB = pitchBasis(bRight, UP, bFwd, swing);
+          const hipX = wx + bRight[0] * (s * 0.145 * sc);
+          const hipZ = wz + bRight[2] * (s * 0.145 * sc);
+          const thighLen = 0.41 * sc;
+          gBox(hipX - thighB.u[0] * thighLen * 0.5, hipY - thighB.u[1] * thighLen * 0.5, hipZ - thighB.u[2] * thighLen * 0.5, bRight, thighB.u, thighB.f, 0.21, 0.41, 0.23, cBody, 0, 5.0);
+          const kneeBend = walkWeight * Math.max(0.0, -swing * 0.65);
+          const shinB = pitchBasis(bRight, UP, bFwd, swing - kneeBend);
+          const kneeX = hipX - thighB.u[0] * thighLen;
+          const kneeY = hipY - thighB.u[1] * thighLen;
+          const kneeZ = hipZ - thighB.u[2] * thighLen;
+          const shinLen = 0.35 * sc;
+          gBox(kneeX - shinB.u[0] * shinLen * 0.5, kneeY - shinB.u[1] * shinLen * 0.5, kneeZ - shinB.u[2] * shinLen * 0.5, bRight, shinB.u, shinB.f, 0.18, 0.36, 0.20, cSteel, 0, 5.0);
+          gBox(kneeX + shinB.f[0] * 0.04 * sc, kneeY + shinB.f[1] * 0.04 * sc, kneeZ + shinB.f[2] * 0.04 * sc, bRight, shinB.u, shinB.f, 0.19, 0.11, 0.12, cCrest, 0, 5.0);
+          const ankleX = kneeX - shinB.u[0] * shinLen;
+          const ankleY = kneeY - shinB.u[1] * shinLen;
+          const ankleZ = kneeZ - shinB.u[2] * shinLen;
+          const bootOffY = (walkWeight < 0.02) ? (footY + 0.065 * sc) : (ankleY - 0.055 * sc);
+          gBox(ankleX + shinB.f[0] * 0.045 * sc, bootOffY, ankleZ + shinB.f[2] * 0.045 * sc, bRight, UP, bFwd, 0.20, 0.13, 0.31, cBoot, 0, 5.0);
+        }
+
+        // Lamellar Waist Tasset Skirt, Belt, Chest Cuirass & Pauldrons
+        bBox(0.0, 0.0, 0.77, 0.56, 0.22, 0.34, cArmor, 0, 5.0);
+        bBox(0.0, 0.0, 0.92, 0.52, 0.13, 0.33, cCrimson, 0, 5.0);
+        bBox(0.17, 0.0, 0.92, 0.18, 0.12, 0.05, cCrest, 0.05, 5.0);
+        bBox(0.0, 0.0, 1.24, 0.50, 0.56, 0.30, cBody, 0, 5.0);
+        bBox(0.03, 0.0, 1.28, 0.34, 0.36, 0.31, cCrest, 0.04, 5.0);
+        for (const s of [-1, 1]) {
+          bBox(0.0, s * 0.34, 1.46, 0.22, 0.22, 0.30, cCrimson, 0, 5.0);
+          bBox(0.0, s * 0.35, 1.56, 0.24, 0.07, 0.32, cCrest, 0.04, 5.0);
+        }
+
+        // Billowing Crimson Back Cloak
+        const capePitch = -0.14 - walkWeight * 0.22 - Math.sin(time * 3.1 + g.phase) * 0.06;
+        const capeB = pitchBasis(bRight, UP, bFwd, capePitch);
+        const shBackX = wx - bFwd[0] * 0.17 * sc;
+        const shBackY = footY + bob + 1.48 * sc;
+        const shBackZ = wz - bFwd[2] * 0.17 * sc;
+        gBox(shBackX - capeB.u[0] * 0.38 * sc, shBackY - capeB.u[1] * 0.38 * sc, shBackZ - capeB.u[2] * 0.38 * sc, bRight, capeB.u, capeB.f, 0.44, 0.76, 0.06, cCrimson, 0, 5.0);
+
+        // Articulated Head Look & Plumed War Helmet (Kabuto / Non Tru)
+        const hScanYaw = yaw + (1.0 - walkWeight) * Math.sin(time * 0.72 + g.phase * 2.1) * 0.26;
+        const hFwd = [Math.sin(hScanYaw), 0.0, Math.cos(hScanYaw)];
+        const hRight = [Math.cos(hScanYaw), 0.0, -Math.sin(hScanYaw)];
+        const headQ = quatFromFrame(hRight, UP, hFwd);
+        function hBox(fOff, rOff, uOff, sx, sy, sz, col, em = 0.0) {
+          pushBox(wx + (hFwd[0] * fOff + hRight[0] * rOff) * sc, footY + bob + uOff * sc, wz + (hFwd[2] * fOff + hRight[2] * rOff) * sc, headQ, sx * sc, sy * sc, sz * sc, col, em, 5.0);
+        }
+        hBox(0.0, 0.0, 1.59, 0.24, 0.10, 0.24, cBronze);
+        hBox(0.0, 0.0, 1.77, 0.33, 0.33, 0.33, cSkin);
+        for (const es of [-1, 1]) hBox(0.16, es * 0.08, 1.83, 0.06, 0.04, 0.04, cVisor);
+        hBox(0.02, 0.0, 1.69, 0.35, 0.13, 0.35, cVisor);
+        hBox(-0.02, 0.0, 1.97, 0.54, 0.08, 0.54, cSteel);
+        hBox(0.0, 0.0, 2.04, 0.46, 0.07, 0.46, cCrest, 0.05);
+        hBox(0.0, 0.0, 2.11, 0.40, 0.16, 0.40, cSteel);
+        hBox(0.0, 0.0, 2.23, 0.12, 0.14, 0.12, cCapTrim, 0.08);
+        hBox(-0.06, 0.0, 2.28 + Math.sin(time * 3.8 + g.phase) * 0.015, 0.10, isCap ? 0.34 : 0.24, isCap ? 0.26 : 0.20, cTassel, 0.04);
+        if (isCap) hBox(0.22, 0.0, 2.14, 0.24, 0.17, 0.06, cCapTrim, 0.12);
+
+        // Right Arm (-bRight side): Spear / Halberd Bearer
+        const armPitchR = (g.z1 !== undefined) ? (0.34 + Math.sin(stridePhase) * armSwingAmp) : 0.38;
+        const armRB = pitchBasis(bRight, UP, bFwd, armPitchR);
+        const rShX = wx - bRight[0] * 0.35 * sc, rShY = footY + bob + 1.46 * sc, rShZ = wz - bRight[2] * 0.35 * sc;
+        const armLen = 0.50 * sc;
+        gBox(rShX - armRB.u[0] * armLen * 0.5, rShY - armRB.u[1] * armLen * 0.5, rShZ - armRB.u[2] * armLen * 0.5, bRight, armRB.u, armRB.f, 0.16, 0.48, 0.16, cSteel, 0, 5.0);
+        const rHandX = rShX - armRB.u[0] * armLen, rHandY = rShY - armRB.u[1] * armLen, rHandZ = rShZ - armRB.u[2] * armLen;
+        gBox(rHandX, rHandY, rHandZ, bRight, armRB.u, armRB.f, 0.13, 0.11, 0.13, cSkin, 0, 5.0);
+        const polePitch = (g.z1 !== undefined) ? 0.18 : 0.0;
+        const poleB = pitchBasis(bRight, UP, bFwd, polePitch);
+        const poleBaseX = (g.z1 !== undefined) ? (rHandX - poleB.u[0] * 0.85 * sc) : rHandX;
+        const poleBaseY = (g.z1 !== undefined) ? (rHandY - poleB.u[1] * 0.85 * sc) : footY;
+        const poleBaseZ = (g.z1 !== undefined) ? (rHandZ - poleB.u[2] * 0.85 * sc) : rHandZ;
+        const poleLen = 2.52 * sc;
+        gBox(poleBaseX + poleB.u[0] * poleLen * 0.5, poleBaseY + poleB.u[1] * poleLen * 0.5, poleBaseZ + poleB.u[2] * poleLen * 0.5, bRight, poleB.u, poleB.f, 0.06, 2.52, 0.06, cWood, 0, 4.0);
+        const tipX = poleBaseX + poleB.u[0] * (poleLen + 0.16 * sc), tipY = poleBaseY + poleB.u[1] * (poleLen + 0.16 * sc), tipZ = poleBaseZ + poleB.u[2] * (poleLen + 0.16 * sc);
+        gBox(tipX, tipY, tipZ, bRight, poleB.u, poleB.f, 0.09, 0.36, 0.07, cBlade, 0.08, 5.0);
+        gBox(tipX - bRight[0] * 0.10 * sc - poleB.u[0] * 0.14 * sc, tipY - poleB.u[1] * 0.14 * sc, tipZ - bRight[2] * 0.10 * sc - poleB.u[2] * 0.14 * sc, bRight, poleB.u, poleB.f, 0.15, 0.18, 0.05, cBlade, 0.06, 5.0);
+        gBox(poleBaseX + poleB.u[0] * (poleLen - 0.14 * sc), poleBaseY + poleB.u[1] * (poleLen - 0.14 * sc), poleBaseZ + poleB.u[2] * (poleLen - 0.14 * sc), bRight, poleB.u, poleB.f, 0.11, 0.18, 0.11, cTassel, 0.04, 5.0);
+
+        // Left Arm (+bRight side): Patrol Swing / War Buckler / Glowing Imperial Hand Lantern
+        const armPitchL = (g.leftItem === 'lantern') ? (0.48 + Math.sin(time * 2.4 + g.phase) * 0.04) : (0.12 - Math.sin(stridePhase) * armSwingAmp);
+        const armLB = pitchBasis(bRight, UP, bFwd, armPitchL);
+        const lShX = wx + bRight[0] * 0.35 * sc, lShY = footY + bob + 1.46 * sc, lShZ = wz + bRight[2] * 0.35 * sc;
+        gBox(lShX - armLB.u[0] * armLen * 0.5, lShY - armLB.u[1] * armLen * 0.5, lShZ - armLB.u[2] * armLen * 0.5, bRight, armLB.u, armLB.f, 0.16, 0.48, 0.16, cSteel, 0, 5.0);
+        const lHandX = lShX - armLB.u[0] * armLen, lHandY = lShY - armLB.u[1] * armLen, lHandZ = lShZ - armLB.u[2] * armLen;
+        gBox(lHandX, lHandY, lHandZ, bRight, armLB.u, armLB.f, 0.13, 0.11, 0.13, cSkin, 0, 5.0);
+        if (g.leftItem === 'lantern') {
+          const swingL = Math.sin(time * 3.0 + g.phase) * 0.06;
+          const lanX = lHandX + bFwd[0] * 0.16 * sc, lanY = lHandY - 0.18 * sc, lanZ = lHandZ + bFwd[2] * 0.16 * sc;
+          gBox(lanX, lanY, lanZ, bRight, UP, bFwd, 0.22, 0.28, 0.22, cLantern, 0.42 + nightMix * 0.95, 5.0);
+          gBox(lanX + swingL * bRight[0], lanY + 0.16 * sc, lanZ + swingL * bRight[2], bRight, UP, bFwd, 0.25, 0.06, 0.25, cBoot, 0, 5.0);
+          gBox(lanX, lanY - 0.16 * sc, lanZ, bRight, UP, bFwd, 0.24, 0.05, 0.24, cBoot, 0, 5.0);
+        } else if (g.leftItem === 'shield') {
+          const shldX = lShX + bRight[0] * 0.12 * sc - armLB.u[0] * 0.32 * sc;
+          const shldY = lShY + bRight[1] * 0.12 * sc - armLB.u[1] * 0.32 * sc;
+          const shldZ = lShZ + bRight[2] * 0.12 * sc - armLB.u[2] * 0.32 * sc;
+          gBox(shldX, shldY, shldZ, bRight, armLB.u, armLB.f, 0.08, 0.46, 0.44, cCrimson, 0, 5.0);
+          gBox(shldX + bRight[0] * 0.045 * sc, shldY, shldZ + bRight[2] * 0.045 * sc, bRight, armLB.u, armLB.f, 0.05, 0.18, 0.18, cCrest, 0.06, 5.0);
+        }
+      }
+    }
+
     const SNOW_QUATS = Array.from({ length: 24 }, () => [0, 0, 0, 1]);
     const lightPosBuf = new Float32Array(42);
     const lightColBuf = new Float32Array(42);
@@ -5621,6 +5837,7 @@
         pushBox(cx + bRight[0] * 0.42, cy + flap, cz + bRight[2] * 0.42, quatFromBasis(bf, flap * 1.2), 0.72, 0.08, 0.26, [0.98, 0.98, 0.97], 0, 5.0);
         pushBox(cx - bRight[0] * 0.42, cy + flap, cz - bRight[2] * 0.42, quatFromBasis(bf, -flap * 1.2), 0.72, 0.08, 0.26, [0.98, 0.98, 0.97], 0, 5.0);
       }
+      drawGuards(simTime, nightGlowMult);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, instArray.subarray(0, instCount * INST_FLOATS));
