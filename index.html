@@ -79,6 +79,7 @@
         <button data-follow="white" class="follow-btn px-1.5 rounded font-medium text-cyan-200 hover:bg-white/15 transition">Bạch Long</button>
         <button data-follow="black" class="follow-btn px-1.5 rounded font-medium text-violet-300 hover:bg-white/15 transition">Hắc Long</button>
         <button data-follow="phoenix" class="follow-btn px-1.5 rounded font-medium text-amber-300 hover:bg-white/15 transition">Phượng Hoàng</button>
+        <button data-follow="xuanwu" class="follow-btn px-1.5 rounded font-medium text-teal-300 hover:bg-white/15 transition">Huyền Vũ</button>
       </div>
 
       <div class="pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15">
@@ -675,11 +676,20 @@
       col = mix(col, uSkyTop, smoothstep(-0.04, 0.14, h));
 
       float sunDot = max(dot(dir, normalize(uSunDir)), 0.0);
-      float horizonGlow = pow(sunDot, 3.4) * smoothstep(0.18, -0.20, dir.y);
-      vec3 sunGlow = uSunColor * (pow(sunDot, 14.0) * 0.65 + horizonGlow * 1.10) * uSunVis;
+      float horizonGlow = pow(sunDot, 2.8) * smoothstep(0.24, -0.20, dir.y);
+      float mieHalo = pow(sunDot, 16.0) * 0.72 + pow(sunDot, 4.0) * 0.16;
+      vec3 sunGlow = uSunColor * (mieHalo + horizonGlow * 1.18) * uSunVis;
       col += sunGlow;
-      float sunDisc = smoothstep(0.9965, 0.9988, sunDot) * uSunVis;
-      col += uSunColor * sunDisc * 1.45;
+      float sunDisc = smoothstep(0.9964, 0.9988, sunDot) * uSunVis;
+      col += uSunColor * sunDisc * 1.50;
+
+      if (dir.y > 0.05) {
+        vec2 cUv = dir.xz / (dir.y + 0.18);
+        float cStrata = sin(cUv.x * 1.15 + uTime * 0.045) * cos(cUv.y * 1.35 - uTime * 0.032) + sin((cUv.x + cUv.y) * 0.65 + uTime * 0.025) * 0.5;
+        float cMask = smoothstep(0.32, 0.95, cStrata) * smoothstep(0.05, 0.24, dir.y) * smoothstep(0.88, 0.28, dir.y);
+        vec3 cloudLit = mix(uSkyMid * 1.25, mix(uSkyHorizon, uSunColor * 0.78, pow(sunDot, 3.0)), 0.55);
+        col = mix(col, cloudLit, cMask * (0.20 + uCrimsonGlow * 0.25));
+      }
 
       col += vec3(0.28, 0.44, 0.78) * uLightning * (0.20 + 0.35 * smoothstep(-0.1, 0.4, dir.y));
 
@@ -740,9 +750,9 @@
     uniform float uSnowCover;
     uniform float uFogDensity;
     uniform float uLightning;
-    uniform vec3 uLightPos[13];
-    uniform vec3 uLightCol[13];
-    uniform float uLightRange[13];
+    uniform vec3 uLightPos[14];
+    uniform vec3 uLightCol[14];
+    uniform float uLightRange[14];
     uniform int uLightCount;
     uniform sampler2D uShadowMap;
     uniform float uUseShadow;
@@ -792,19 +802,21 @@
 
       vec3 camVec = uCamPos - worldPos;
       float dist = length(camVec);
-      bool nearDetail = dist < 118.0;
+      bool nearDetail = dist < 86.0;
+      bool nearLit = dist < 114.0;
 
       if (isWater > 0.5) {
         if (inN.y > 0.5) {
           float r1 = sin(worldPos.x * 2.1 + uTime * (1.6 + uRainWetness * 2.5)) * cos(worldPos.z * 2.3 - uTime * (1.3 + uRainWetness * 2.5));
           float r2 = sin((worldPos.x - worldPos.z) * 3.4 - uTime * 2.1);
+          float caustic = smoothstep(0.32, 0.96, sin(worldPos.x * 1.65 + r2) * cos(worldPos.z * 1.75 - r1) * 0.5 + 0.5);
           N = normalize(inN + vec3(r1 * 0.055 + r2 * 0.03, 0.0, r2 * 0.055 - r1 * 0.03));
           float spillLip = smoothstep(18.6, 20.1, worldPos.z);
           float lipFoam = spillLip * (0.55 + 0.45 * sin(worldPos.x * 3.6 + uTime * 5.2));
-          col = mix(vec3(0.07, 0.44, 0.54), vec3(0.14, 0.62, 0.70), 0.45 + 0.25 * r1);
-          col = mix(col, vec3(0.82, 0.96, 1.00), clamp(lipFoam * 0.75, 0.0, 0.85));
-          specBoost = 0.95;
-          waterGlow = lipFoam * 0.14;
+          col = mix(vec3(0.06, 0.43, 0.56), vec3(0.16, 0.68, 0.76), 0.42 + 0.25 * r1 + caustic * 0.16);
+          col = mix(col, vec3(0.84, 0.97, 1.00), clamp(lipFoam * 0.78, 0.0, 0.88));
+          specBoost = 1.15;
+          waterGlow = lipFoam * 0.16 + caustic * 0.04;
         } else {
           float colStream = 0.5 + 0.5 * sin(worldPos.x * 4.4);
           float fallFlow = sin(worldPos.y * 1.9 + uTime * 11.5 + sin(worldPos.x * 3.1) * 1.4);
@@ -896,8 +908,8 @@
       vec3 amb = uAmbientColor * mix(0.55, 1.15, hemi);
 
       vec3 ptLight = vec3(0.0);
-      if (nearDetail) {
-        for (int i = 0; i < 13; i++) {
+      if (nearLit) {
+        for (int i = 0; i < 14; i++) {
           if (i >= uLightCount) break;
           vec3 d = uLightPos[i] - worldPos;
           float dist2 = dot(d, d);
@@ -913,22 +925,29 @@
 
       vec3 V = camVec / max(dist, 0.0001);
       vec3 H = normalize(L + V);
-      float spec = pow(max(dot(N, H), 0.0), 42.0) * (0.06 + specBoost) * shadow;
+      float specPow = (isWater > 0.5 || style > 6.5) ? 64.0 : 42.0;
+      float specGain = (style > 4.5 && style < 5.5) ? 0.24 : ((style > 6.5) ? 0.26 : 0.06);
+      float spec = pow(max(dot(N, H), 0.0), specPow) * (specGain + specBoost) * shadow;
       float oneMinusNV = 1.0 - max(dot(inN, V), 0.0);
-      float waterFres = oneMinusNV * oneMinusNV * oneMinusNV * isWater * 0.45;
+      float fresnel3 = oneMinusNV * oneMinusNV * oneMinusNV;
+      float waterFres = fresnel3 * isWater * 0.48;
+      float leafTranslucency = (style > 2.5 && style < 3.5) ? pow(max(dot(V, -L), 0.0), 3.0) * (0.28 + 0.24 * shadow) : 0.0;
+      float sheenMask = (style > 1.5 && style < 2.5) ? 0.14 : ((style > 6.5) ? 0.22 : (uRainWetness * 0.24));
       float rimNV = 1.0 - max(dot(N, V), 0.0);
       float rim = rimNV * rimNV * rimNV * max(dot(N, vec3(-0.8617, 0.2230, -0.4562)) * 0.6 + 0.4, 0.0) * (1.0 - isWater);
-      vec3 rimLight = uSunColor * rim * 0.24 * mix(0.45, 1.0, shadow);
+      vec3 rimLight = uSunColor * rim * (0.24 + sheenMask * 0.35) * mix(0.45, 1.0, shadow);
+      vec3 skyRefl = mix(uAmbientColor, uFogHorizon, 0.62) * fresnel3 * sheenMask * (0.5 + 0.5 * N.y);
 
       vec3 bounceFill = vec3(0.08, 0.06, 0.05) * (0.5 - 0.5 * N.y);
-      vec3 lit = clamp(col, 0.0, 1.0) * (amb + bounceFill + dirLight + flashLight + ptLight) * ao * microAO * bevel + uSunColor * spec + rimLight + mix(uFogHorizon, vec3(0.42, 0.70, 0.92), 0.55) * waterFres;
+      vec3 lit = clamp(col, 0.0, 1.0) * (amb + bounceFill + dirLight + flashLight + ptLight + uSunColor * leafTranslucency) * ao * microAO * bevel + uSunColor * spec + rimLight + skyRefl + mix(uFogHorizon, vec3(0.42, 0.70, 0.92), 0.55) * waterFres;
 
-      float canyonMist = exp(-max(worldPos.y + 8.5, 0.0) * 0.34) * 0.78;
-      float distFog = clamp(1.0 - exp(-pow(max(dist - (82.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
+      float mistSwirl = 0.88 + 0.12 * sin(worldPos.x * 0.12 + uTime * 0.35) * cos(worldPos.z * 0.11 - uTime * 0.28);
+      float canyonMist = exp(-max(worldPos.y + 8.8, 0.0) * 0.36) * 0.76 * mistSwirl;
+      float distFog = clamp(1.0 - exp(-pow(max(dist - (84.0 / uFogDensity), 0.0) * 0.010 * uFogDensity, 1.4)), 0.0, 0.90);
       float fogAmt = clamp(canyonMist + distFog, 0.0, 0.92);
-      vec3 fogTarget = mix(uFogColor, mix(uFogColor, uFogHorizon, 0.65), clamp(canyonMist, 0.0, 0.78));
+      vec3 fogTarget = mix(uFogColor, mix(uFogColor, uFogHorizon, 0.68), clamp(canyonMist, 0.0, 0.78));
       outColor = mix(lit, fogTarget, fogAmt);
-      outGlow = vec3(spec * isWater * 0.55 + waterGlow);
+      outGlow = vec3(spec * isWater * 0.52 + waterGlow);
     }`;
 
     const staticVS = `#version 300 es
@@ -1149,16 +1168,25 @@
     in vec2 vUV;
     uniform sampler2D uScene;
     uniform sampler2D uBloom;
+    uniform vec2 uTexel;
     out vec4 fragColor;
     vec3 aces(vec3 x) {
       return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
     }
     void main() {
-      vec3 col = texture(uScene, vUV).rgb + texture(uBloom, vUV).rgb * 0.46;
-      col = aces(col * 1.10);
+      vec3 c0 = texture(uScene, vUV).rgb;
+      vec3 blur4 = 0.25 * (
+        texture(uScene, vUV + vec2(uTexel.x, 0.0)).rgb +
+        texture(uScene, vUV - vec2(uTexel.x, 0.0)).rgb +
+        texture(uScene, vUV + vec2(0.0, uTexel.y)).rgb +
+        texture(uScene, vUV - vec2(0.0, uTexel.y)).rgb
+      );
+      vec3 sharpC = c0 + clamp(c0 - blur4, vec3(-0.14), vec3(0.14)) * 0.32;
+      vec3 col = sharpC + texture(uBloom, vUV).rgb * 0.44;
+      col = aces(col * 1.12);
       vec2 q = vUV - 0.5;
-      col *= 1.0 - dot(q, q) * 0.22;
-      fragColor = vec4(pow(col, vec3(0.94)), 1.0);
+      col *= 1.0 - dot(q, q) * 0.20;
+      fragColor = vec4(pow(col, vec3(0.93)), 1.0);
     }`;
 
     const skyProg = createProgram(quadVS, skyFS);
@@ -1183,7 +1211,7 @@
     const uIn = getUniforms(instProg, sceneUniformNames);
     const uWx = getUniforms(wxProg, ['uProj','uView','uSunDir','uSunColor','uAmbientColor','uFogColor','uFogHorizon','uCamPos','uTime','uFogDensity','uLightning']);
     const uBlur = getUniforms(blurProg, ['uTex','uDir']);
-    const uComp = getUniforms(compProg, ['uScene','uBloom']);
+    const uComp = getUniforms(compProg, ['uScene','uBloom','uTexel']);
 
     // ---------- Ultra-Fine Voxel Grid (176 x 124 x 176, VS = 0.48) ----------
     const VS = 0.28;
@@ -2080,9 +2108,9 @@
 
     const seaClouds = [];
     for (let i = 0; i < 18; i++) {
-      const ang = (i / 18) * Math.PI * 2, rad = 40 + hash3(i, 71, 3) * 34;
+      const ang = (i / 18) * Math.PI * 2, rad = 64 + hash3(i, 71, 3) * 32;
       seaClouds.push({
-        x: Math.cos(ang) * rad, y: -11.5 + hash3(i, 72, 4) * 5.2, z: Math.sin(ang) * rad,
+        x: Math.cos(ang) * rad, y: -12.4 + hash3(i, 72, 4) * 3.8, z: Math.sin(ang) * rad,
         sx: 6.5 + hash3(i, 73, 5) * 6.0, sy: 1.6 + hash3(i, 74, 6) * 1.4, sz: 5.5 + hash3(i, 75, 7) * 5.0,
         speed: 0.14 + hash3(i, 76, 8) * 0.14, phase: hash3(i, 77, 9) * 6.28
       });
@@ -2601,7 +2629,7 @@
     let currentTimeMode = location.hash.includes('night') ? 'night' : (location.hash.includes('day') ? 'day' : 'sunset');
     let currentWeather = location.hash.includes('storm') ? 'storm' : ((!location.hash.includes('snowbreath') && location.hash.includes('snow')) ? 'snow' : (location.hash.includes('fog') ? 'fog' : 'clear'));
     let currentCamMode = location.hash.includes('cam=dragon') ? 'dragon' : 'render';
-    let followDragonKey = location.hash.includes('follow=white') ? 'white' : (location.hash.includes('follow=black') ? 'black' : (location.hash.includes('follow=phoenix') ? 'phoenix' : 'green'));
+    let followDragonKey = location.hash.includes('follow=white') ? 'white' : (location.hash.includes('follow=black') ? 'black' : (location.hash.includes('follow=phoenix') ? 'phoenix' : (location.hash.includes('follow=xuanwu') ? 'xuanwu' : 'green')));
     let playing = true;
     let simTime = location.hash.includes('t=') ? (parseFloat(location.hash.split('t=')[1]) || 0) : 0;
 
@@ -2663,7 +2691,7 @@
     function syncCamButtons() {
       document.querySelectorAll('.cam-btn').forEach(b => {
         const active = b.dataset.cam === currentCamMode;
-        if (b.dataset.cam === 'dragon') b.textContent = followDragonKey === 'phoenix' ? 'Theo Phượng' : 'Theo Rồng';
+        if (b.dataset.cam === 'dragon') b.textContent = followDragonKey === 'phoenix' ? 'Theo Phượng' : (followDragonKey === 'xuanwu' ? 'Theo Huyền Vũ' : 'Theo Rồng');
         b.className = `cam-btn pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] ${active ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-medium' : 'bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--secondary)]'}`;
       });
     }
@@ -2673,7 +2701,8 @@
         green: { active: 'bg-emerald-600 text-white shadow-sm', idle: 'text-emerald-300 hover:bg-white/15' },
         white: { active: 'bg-cyan-500 text-slate-950 shadow-sm font-semibold', idle: 'text-cyan-200 hover:bg-white/15' },
         black: { active: 'bg-violet-600 text-white shadow-sm', idle: 'text-violet-300 hover:bg-white/15' },
-        phoenix: { active: 'bg-rose-600 text-white shadow-sm font-semibold', idle: 'text-amber-300 hover:bg-white/15' }
+        phoenix: { active: 'bg-rose-600 text-white shadow-sm font-semibold', idle: 'text-amber-300 hover:bg-white/15' },
+        xuanwu: { active: 'bg-teal-600 text-white shadow-sm font-semibold', idle: 'text-teal-300 hover:bg-white/15' }
       };
       document.querySelectorAll('.follow-btn').forEach(b => {
         const k = b.dataset.follow, active = (currentCamMode === 'dragon' && k === followDragonKey);
@@ -2700,12 +2729,12 @@
 
     const togglePlayBtn = document.getElementById('toggle-play');
     togglePlayBtn.addEventListener('click', () => { playing = !playing; togglePlayBtn.textContent = playing ? 'Tạm dừng' : 'Tiếp tục'; });
-    const voxelLabel = `${voxelCount.toLocaleString('vi-VN')} khối · Tam Long`;
+    const voxelLabel = `${voxelCount.toLocaleString('vi-VN')} khối · Tứ Linh`;
     const timerExt = gl.getExtension('EXT_disjoint_timer_query_webgl2');
     const pendingGpuQ = [];
     let dynResScale = 1.0, gpuMsSmooth = 8.0, lastScaleAdjust = 0;
     let fpsFrames = 0, fpsAccumMs = 0, shownFps = 60, lastRafMs = performance.now(), rafDtSmooth = 16.6;
-    const MAX_RENDER_PIXELS = 1080000;
+    const MAX_RENDER_PIXELS = 960000;
 
     const btnFs = document.getElementById('btn-fs');
     btnFs.addEventListener('click', () => { if (!document.fullscreenElement) stage.requestFullscreen?.(); else document.exitFullscreen?.(); });
@@ -2782,14 +2811,17 @@
         );
       }
 
-      hBox(0.0, 0, 0.15, 2.5 * skullW, 2.0, 2.6, styleCfg.c1);
-      hBox(0.8, 0, 0.45, 2.1 * skullW, 1.0, 2.1, styleCfg.c2);
-      hBox(2.2, 0, 0.15, 1.75 * skullW, 1.05, 2.2, styleCfg.c1);
-      hBox(3.1, 0, 0.42, 1.35 * skullW, 0.62, 0.95, styleCfg.c2);
-      hBox(1.5, 0, 0.95, 1.15 * skullW, 0.36, 1.55, styleCfg.cDark);
+      hBox(0.0, 0, 0.15, 2.55 * skullW, 2.02, 2.65, styleCfg.c1);
+      hBox(0.8, 0, 0.48, 2.15 * skullW, 1.02, 2.15, styleCfg.c2);
+      hBox(2.2, 0, 0.16, 1.78 * skullW, 1.08, 2.25, styleCfg.c1);
+      hBox(3.1, 0, 0.44, 1.38 * skullW, 0.65, 0.98, styleCfg.c2);
+      hBox(2.35, 0, 0.78, 0.92 * skullW, 0.34, 1.95, styleCfg.spineB, 0.14 + emDetail * 0.4, 5.0);
+      hBox(1.5, 0, 1.02, 1.22 * skullW, 0.42, 1.65, styleCfg.cDark);
       for (const s of [-1, 1]) {
-        hBox(3.55, 0.42 * skullW * s, 0.65, 0.30, 0.28, 0.32, styleCfg.cDark, 0, 5.0);
-        hBox(0.15, 1.38 * skullW * s, 0.15, 0.45, 0.65, 1.25, styleCfg.cDark);
+        hBox(3.58, 0.44 * skullW * s, 0.66, 0.32, 0.30, 0.34, styleCfg.cDark, 0, 5.0);
+        hBox(0.15, 1.42 * skullW * s, 0.15, 0.48, 0.68, 1.32, styleCfg.cDark);
+        hBox(1.55, 1.36 * skullW * s, 0.72, 0.38, 0.38, 1.28, styleCfg.c2);
+        hBox(-0.65, 1.15 * skullW * s, -0.58, 0.50, 0.72, 1.15, styleCfg.mane, 0.12 + emDetail * 0.45, 5.0);
       }
 
       const jawDrop = 0.82 + jawOpen * 0.92;
@@ -2807,33 +2839,36 @@
         hBox(2.75, 0.52 * skullW * s, -jawDrop + 0.36, 0.24, vType === 'black' ? 0.68 : 0.42, 0.24, [0.99, 0.96, 0.90], 0.1, 5.0);
 
         if (vType === 'white') {
-          // BẠCH LONG: Elegant swept crystal horns + multi-tiered translucent ice-silk ribbons!
-          for (let a = 0; a < 5; a++) hBox(-0.4 - a * 0.82, (0.58 + a * 0.14) * s, 1.25 + a * 0.42, 0.26 - a * 0.02, 0.34, 0.68, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
-          hBox(0.35, 1.22 * s, -0.20, 0.38, 0.42, 0.85, styleCfg.spineA, 0.45 + emDetail, 5.0);
-          for (let w = 0; w < 6; w++) {
-            const silkSway = Math.sin(time * 5.2 - w * 0.65 + s * 1.4) * 0.52;
-            hBox(1.2 - w * 0.88, (1.25 + w * 0.55) * s, 0.15 + silkSway, 0.86, 0.14, 0.44, styleCfg.mane, 0.32 + emDetail * 0.7, 5.0);
+          for (let a = 0; a < 6; a++) hBox(-0.3 - a * 0.78, (0.56 + a * 0.15) * s, 1.25 + a * 0.44, 0.26 - a * 0.02, 0.36, 0.72, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          hBox(-1.4, 0.96 * s, 2.85, 0.22, 0.85, 0.30, styleCfg.horn, styleCfg.hornEm + emDetail * 1.1, 5.0);
+          hBox(-2.5, 1.12 * s, 3.45, 0.20, 0.72, 0.26, styleCfg.spineA, 0.48 + emDetail, 5.0);
+          hBox(0.35, 1.24 * s, -0.20, 0.40, 0.44, 0.92, styleCfg.spineA, 0.45 + emDetail, 5.0);
+          for (let w = 0; w < 7; w++) {
+            const silkSway = Math.sin(time * 5.2 - w * 0.60 + s * 1.4) * 0.56;
+            const silkYaw = Math.cos(time * 4.4 - w * 0.45) * 0.18;
+            hBox(1.3 - w * 0.86, (1.24 + w * 0.52 + silkYaw * s) * s, 0.15 + silkSway, 0.88 - w * 0.06, 0.15, 0.46, w > 4 ? [0.76, 0.96, 1.0] : styleCfg.mane, 0.34 + emDetail * 0.75, 5.0);
           }
         } else if (vType === 'black') {
-          // HẮC LONG: Brutal hooking demon crown horns + armored obsidian jaw fins!
-          for (let a = 0; a < 5; a++) hBox(-0.1 - a * 0.48, (0.85 + a * 0.34) * s, 1.38 + a * 0.66, 0.48, 0.78, 0.52, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
-          hBox(-0.6 + 1.65, 2.25 * s, 3.85, 0.34, 0.62, 0.92, styleCfg.horn, 0.52 + emDetail, 5.0);
+          for (let a = 0; a < 6; a++) hBox(-0.1 - a * 0.46, (0.85 + a * 0.32) * s, 1.36 + a * 0.64, 0.48 - a * 0.03, 0.78, 0.52, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          hBox(-0.5 + 1.55, 2.25 * s, 3.95, 0.36, 0.70, 0.95, styleCfg.horn, 0.58 + emDetail, 5.0);
+          hBox(-1.6, 1.85 * s, 4.45, 0.28, 0.88, 0.48, styleCfg.spineB, 0.62 + emDetail, 5.0);
           hBox(-1.1, 0.78 * s, 2.95, 0.42, 1.15, 0.45, styleCfg.spineB, 0.48 + emDetail, 5.0);
           hBox(1.1, 1.68 * s, -0.35, 0.65, 0.75, 0.95, styleCfg.cDark, 0.0, 5.0);
           hBox(-0.45, 1.75 * s, -0.10, 0.72, 1.55, 1.45, styleCfg.mane, 0.15 + emDetail * 0.5, 5.0);
-          for (let w = 0; w < 3; w++) hBox(2.2 - w * 0.75, (1.45 + w * 0.35) * s, -0.45 - w * 0.20, 0.45, 0.35, 0.25, styleCfg.whisker, 0.30 + emDetail, 5.0);
+          for (let w = 0; w < 4; w++) hBox(2.2 - w * 0.70, (1.42 + w * 0.32) * s, -0.42 - w * 0.18, 0.48, 0.35, 0.26, styleCfg.whisker, 0.32 + emDetail, 5.0);
         } else {
-          // THANH LONG: Majestic stag antlers + serrated cheek crests & flowing golden whiskers!
-          for (let a = 0; a < 5; a++) hBox(-0.3 - a * 0.58, (0.72 + a * 0.22) * s, 1.35 + a * 0.62, 0.40 - a * 0.03, 0.65, 0.48, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
-          hBox(-1.1, 1.45 * s, 2.95, 0.30, 0.85, 0.32, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
-          hBox(-2.1, 1.25 * s, 3.60, 0.26, 0.75, 0.28, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          for (let a = 0; a < 6; a++) hBox(-0.3 - a * 0.56, (0.72 + a * 0.22) * s, 1.35 + a * 0.60, 0.42 - a * 0.03, 0.68, 0.48, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          hBox(-0.9, 1.42 * s, 2.85, 0.30, 0.92, 0.34, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          hBox(-1.85, 1.28 * s, 3.65, 0.28, 0.86, 0.30, styleCfg.horn, styleCfg.hornEm + emDetail, 5.0);
+          hBox(-2.65, 1.50 * s, 4.25, 0.24, 0.65, 0.28, [1.0, 0.92, 0.45], 0.48 + emDetail, 5.0);
           hBox(-0.45, 1.55 * s, -0.10, 0.65, 1.35, 1.45, styleCfg.mane, 0.1 + emDetail * 0.4, 5.0);
           hBox(-1.25, 1.85 * s, 0.45, 0.55, 1.15, 1.25, styleCfg.mane, 0.1 + emDetail * 0.4, 5.0);
           hBox(0.55, 1.55 * s, -0.45, 0.32, 0.42, 1.15, styleCfg.horn, 0.25 + emDetail * 0.7, 5.0);
-          for (let w = 0; w < 5; w++) {
-            const wSwing = Math.sin(time * 6.0 - w * 0.65 + s) * 0.42;
-            const wLift = (w > 2) ? (w - 2) * 0.35 : -w * 0.15;
-            hBox(2.75 - w * 0.62, (1.28 + w * 0.68) * s, -0.10 + wSwing + wLift, 0.70, 0.18, 0.20, styleCfg.whisker, 0.25 + emDetail, 5.0);
+          hBox(2.25, 0.36 * skullW * s, -jawDrop + 0.02, 0.32, 0.68, 0.34, styleCfg.mane, 0.12 + emDetail * 0.4, 5.0);
+          for (let w = 0; w < 7; w++) {
+            const wSwing = Math.sin(time * 6.0 - w * 0.55 + s) * 0.46;
+            const wLift = (w > 3) ? (w - 3) * 0.32 : -w * 0.14;
+            hBox(2.85 - w * 0.56, (1.22 + w * 0.58) * s, -0.08 + wSwing + wLift, 0.68 - w * 0.04, 0.18, 0.20, w > 4 ? [1.0, 0.92, 0.42] : styleCfg.whisker, 0.28 + emDetail, 5.0);
           }
         }
       }
@@ -2861,40 +2896,49 @@
         const colFlank = i % 2 === 0 ? styleCfg.c2 : styleCfg.cDark;
         const bodyGlow = emScale + (i % 4 === 0 ? boostGlow * (vType === 'white' ? 0.08 : 0.24) : 0);
         pushBox(pos[0], pos[1], pos[2], q, 1.62 * taper, 1.50 * taper, 0.95, colMain, bodyGlow, 7.0);
-        // Sculpted lateral scale armor plates + segmented belly scutes
-        pushBox(pos[0] + right[0] * 0.78 * taper, pos[1] + right[1] * 0.78 * taper, pos[2] + right[2] * 0.78 * taper, q, 0.42 * taper, 0.96 * taper, 0.82, colFlank, bodyGlow, 7.0);
-        pushBox(pos[0] - right[0] * 0.78 * taper, pos[1] - right[1] * 0.78 * taper, pos[2] - right[2] * 0.78 * taper, q, 0.42 * taper, 0.96 * taper, 0.82, colFlank, bodyGlow, 7.0);
+        pushBox(pos[0] + right[0] * 0.80 * taper, pos[1] + right[1] * 0.80 * taper, pos[2] + right[2] * 0.80 * taper, q, 0.44 * taper, 0.98 * taper, 0.84, colFlank, bodyGlow, 7.0);
+        pushBox(pos[0] - right[0] * 0.80 * taper, pos[1] - right[1] * 0.80 * taper, pos[2] - right[2] * 0.80 * taper, q, 0.44 * taper, 0.98 * taper, 0.84, colFlank, bodyGlow, 7.0);
+        if (i % 2 === 0 && s < 0.78) {
+          pushBox(pos[0] + up[0] * 0.74 * taper, pos[1] + up[1] * 0.74 * taper, pos[2] + up[2] * 0.74 * taper, q, 1.38 * taper, 0.26 * taper, 0.48, styleCfg.cDark, bodyGlow, 7.0);
+        }
         pushBox(pos[0] - up[0] * 0.70 * taper, pos[1] - up[1] * 0.70 * taper, pos[2] - up[2] * 0.70 * taper, q, 1.24 * taper, 0.46 * taper, i % 2 === 0 ? 0.92 : 0.72, styleCfg.belly, 0.08 + bodyGlow * 1.1, 7.0);
         if (i % 3 === 0) {
-          for (const ls of [-1, 1]) pushBox(pos[0] + right[0] * (ls * 0.92 * taper), pos[1] + right[1] * (ls * 0.92 * taper) + up[1] * 0.25 * taper, pos[2] + right[2] * (ls * 0.92 * taper), q, 0.22 * taper, 0.48 * taper, 0.65, styleCfg.spineA, styleCfg.spineEm + boostGlow * 1.2, 5.0);
+          for (const ls of [-1, 1]) pushBox(pos[0] + right[0] * (ls * 0.94 * taper) + up[0] * 0.26 * taper, pos[1] + right[1] * (ls * 0.94 * taper) + up[1] * 0.26 * taper, pos[2] + right[2] * (ls * 0.94 * taper) + up[2] * 0.26 * taper, q, 0.24 * taper, 0.52 * taper, 0.68, styleCfg.spineA, styleCfg.spineEm + boostGlow * 1.2, 5.0);
         }
 
         if (vType === 'black') {
-          // Dual row jagged demon dorsal spikes + pulsing void-lightning fissure veins & shoulder wings!
           const spineH = (i % 2 === 0 ? styleCfg.spineH : styleCfg.spineH * 0.72) * taper;
           const spDir = norm3([fwd[0] * 0.82 - up[0] * 0.56, fwd[1] * 0.82 - up[1] * 0.56, fwd[2] * 0.82 - up[2] * 0.56]);
           const spQ = quatFromFrame(right, cross(spDir, right), spDir);
           for (const ds of [-0.34, 0.34]) {
             pushBox(pos[0] + up[0] * (0.85 * taper + spineH * 0.44) + right[0] * ds, pos[1] + up[1] * (0.85 * taper + spineH * 0.44) + right[1] * ds, pos[2] + up[2] * (0.85 * taper + spineH * 0.44) + right[2] * ds, spQ, 0.24, spineH, 0.68, i % 3 === 0 ? styleCfg.spineB : styleCfg.spineA, styleCfg.spineEm + emDetail, 5.0);
           }
-          if (i >= frontLimbIdx - 1 && i <= frontLimbIdx + 6 && i % 2 === 0) {
-            const wExt = 1.6 + (i - frontLimbIdx) * 0.45;
+          if (i >= frontLimbIdx - 2 && i <= frontLimbIdx + 6 && i % 2 === 0) {
+            const wExt = 1.85 + (i - frontLimbIdx + 1) * 0.52;
+            const wingFlapB = Math.sin(time * 4.2 - i * 0.28) * 0.32;
             for (const side of [-1, 1]) {
-              pushBox(pos[0] + right[0] * (side * (1.2 + wExt * 0.45)) + up[0] * (0.9 + wExt * 0.35), pos[1] + right[1] * (side * (1.2 + wExt * 0.45)) + up[1] * (0.9 + wExt * 0.35), pos[2] + right[2] * (side * (1.2 + wExt * 0.45)) + up[2] * (0.9 + wExt * 0.35), q, wExt, 0.28, 0.72, i % 4 === 0 ? styleCfg.horn : styleCfg.cDark, 0.25 + emDetail, 5.0);
+              const wx = pos[0] + right[0] * (side * (1.2 + wExt * 0.44)) + up[0] * (0.95 + wExt * 0.35 + wingFlapB);
+              const wy = pos[1] + right[1] * (side * (1.2 + wExt * 0.44)) + up[1] * (0.95 + wExt * 0.35 + wingFlapB);
+              const wz = pos[2] + right[2] * (side * (1.2 + wExt * 0.44)) + up[2] * (0.95 + wExt * 0.35 + wingFlapB);
+              pushBox(wx, wy, wz, q, wExt, 0.24, 0.78, styleCfg.cDark, 0.14 + emDetail * 0.5, 5.0);
+              pushBox(wx + right[0] * (side * wExt * 0.45), wy + right[1] * (side * wExt * 0.45) + 0.16, wz + right[2] * (side * wExt * 0.45), q, 0.48, 0.34, 0.92, styleCfg.horn, 0.52 + emDetail, 5.0);
             }
           }
         } else if (vType === 'white') {
-          const spineH = (0.62 + Math.sin(s * Math.PI * 5) * 0.14) * taper;
+          const spineH = (0.66 + Math.sin(s * Math.PI * 5) * 0.14) * taper;
           pushBox(pos[0] + up[0] * (0.82 * taper + spineH * 0.35), pos[1] + up[1] * (0.82 * taper + spineH * 0.35), pos[2] + up[2] * (0.82 * taper + spineH * 0.35), q, 0.18, spineH, 0.92, i % 2 === 0 ? styleCfg.spineA : styleCfg.spineB, styleCfg.spineEm + emDetail, 5.0);
-          if ((i >= frontLimbIdx && i <= frontLimbIdx + 5) || (i >= hindLimbIdx && i <= hindLimbIdx + 3)) {
-            const flutter = Math.sin(time * 5.5 - i * 0.6) * 0.38;
-            for (const side of [-1, 1]) pushBox(pos[0] + right[0] * (side * 1.45 * taper), pos[1] + right[1] * (side * 1.45 * taper) + flutter * 0.4, pos[2] + right[2] * (side * 1.45 * taper), q, 1.05, 0.14, 0.68, styleCfg.mane, 0.30 + emDetail * 0.9, 5.0);
+          if ((i >= frontLimbIdx && i <= frontLimbIdx + 6) || (i >= hindLimbIdx && i <= hindLimbIdx + 3)) {
+            const flutter = Math.sin(time * 5.5 - i * 0.6) * 0.42;
+            for (const side of [-1, 1]) pushBox(pos[0] + right[0] * (side * 1.48 * taper), pos[1] + right[1] * (side * 1.48 * taper) + flutter * 0.42, pos[2] + right[2] * (side * 1.48 * taper), q, 1.18, 0.14, 0.72, styleCfg.mane, 0.34 + emDetail * 0.9, 5.0);
           }
         } else {
-          const spineH = (i % 2 === 0 ? styleCfg.spineH : styleCfg.spineH * 0.62) * taper;
+          const spineH = (i % 2 === 0 ? styleCfg.spineH : styleCfg.spineH * 0.65) * taper;
           const spDir = norm3([fwd[0] * 0.85 - up[0] * 0.52, fwd[1] * 0.85 - up[1] * 0.52, fwd[2] * 0.85 - up[2] * 0.52]);
           const spQ = quatFromFrame(right, cross(spDir, right), spDir);
-          pushBox(pos[0] + up[0] * (0.84 * taper + spineH * 0.42), pos[1] + up[1] * (0.84 * taper + spineH * 0.42), pos[2] + up[2] * (0.84 * taper + spineH * 0.42), spQ, 0.28, spineH, 0.70, i % 3 === 0 ? styleCfg.spineB : styleCfg.spineA, styleCfg.spineEm + emDetail, 5.0);
+          pushBox(pos[0] + up[0] * (0.84 * taper + spineH * 0.42), pos[1] + up[1] * (0.84 * taper + spineH * 0.42), pos[2] + up[2] * (0.84 * taper + spineH * 0.42), spQ, 0.28, spineH, 0.72, i % 3 === 0 ? styleCfg.spineB : styleCfg.spineA, styleCfg.spineEm + emDetail, 5.0);
+          if (i >= 3 && i <= 9) {
+            for (const side of [-1, 1]) pushBox(pos[0] + right[0] * (side * 1.15 * taper), pos[1] + right[1] * (side * 1.15 * taper), pos[2] + right[2] * (side * 1.15 * taper), q, 0.34, 0.82, 0.68, i % 2 === 0 ? styleCfg.mane : styleCfg.horn, 0.14 + emDetail * 0.5, 5.0);
+          }
         }
 
         if (i === frontLimbIdx || i === hindLimbIdx) {
@@ -2931,14 +2975,16 @@
         }
         if (i === N - 1) {
           if (vType === 'black') {
-            pushBox(pos[0] - fwd[0] * 1.2, pos[1] - fwd[1] * 1.2, pos[2] - fwd[2] * 1.2, q, 2.5, 0.65, 2.2, styleCfg.cDark, 0.15 + emDetail * 0.5, 5.0);
-            pushBox(pos[0] - fwd[0] * 2.4, pos[1] - fwd[1] * 2.4, pos[2] - fwd[2] * 2.4, q, 3.4, 0.42, 1.4, styleCfg.horn, 0.55 + emDetail, 5.0);
-            pushBox(pos[0] - fwd[0] * 3.4, pos[1] - fwd[1] * 3.4, pos[2] - fwd[2] * 3.4, q, 1.6, 0.34, 1.2, styleCfg.spineB, 0.65 + emDetail, 5.0);
+            pushBox(pos[0] - fwd[0] * 1.2, pos[1] - fwd[1] * 1.2, pos[2] - fwd[2] * 1.2, q, 2.7, 0.65, 2.4, styleCfg.cDark, 0.15 + emDetail * 0.5, 5.0);
+            pushBox(pos[0] - fwd[0] * 2.4, pos[1] - fwd[1] * 2.4, pos[2] - fwd[2] * 2.4, q, 3.8, 0.44, 1.4, styleCfg.horn, 0.58 + emDetail, 5.0);
+            pushBox(pos[0] - fwd[0] * 3.6, pos[1] - fwd[1] * 3.6, pos[2] - fwd[2] * 3.6, q, 1.5, 0.36, 1.5, styleCfg.spineB, 0.68 + emDetail, 5.0);
+            for (const ds of [-1, 1]) pushBox(pos[0] - fwd[0] * 2.8 + right[0] * (1.8 * ds), pos[1] - fwd[1] * 2.8 + right[1] * (1.8 * ds), pos[2] - fwd[2] * 2.8 + right[2] * (1.8 * ds), q, 0.42, 0.32, 1.7, styleCfg.spineA, 0.55 + emDetail, 5.0);
           } else if (vType === 'white') {
-            for (const ts of [-0.7, 0.7]) pushBox(pos[0] - fwd[0] * 1.6 + right[0] * ts, pos[1] - fwd[1] * 1.6, pos[2] - fwd[2] * 1.6 + right[2] * ts, q, 0.45, 0.22, 3.0, styleCfg.mane, 0.35 + emDetail, 5.0);
+            for (const ts of [-0.75, 0, 0.75]) pushBox(pos[0] - fwd[0] * 1.65 + right[0] * ts, pos[1] - fwd[1] * 1.65, pos[2] - fwd[2] * 1.65 + right[2] * ts, q, ts === 0 ? 0.68 : 0.42, 0.22, ts === 0 ? 3.5 : 2.9, ts === 0 ? [0.84, 0.98, 1.0] : styleCfg.mane, 0.40 + emDetail, 5.0);
           } else {
-            pushBox(pos[0] - fwd[0] * 1.1, pos[1] - fwd[1] * 1.1, pos[2] - fwd[2] * 1.1, q, 2.2 * styleCfg.limbScale, 0.38, 1.8, styleCfg.mane, 0.22 + emDetail * 0.8, 5.0);
-            pushBox(pos[0] - fwd[0] * 2.0, pos[1] - fwd[1] * 2.0, pos[2] - fwd[2] * 2.0, q, 1.5 * styleCfg.limbScale, 0.32, 1.3, styleCfg.horn, 0.28 + emDetail, 5.0);
+            pushBox(pos[0] - fwd[0] * 1.15, pos[1] - fwd[1] * 1.15, pos[2] - fwd[2] * 1.15, q, 2.5 * styleCfg.limbScale, 0.38, 1.9, styleCfg.mane, 0.24 + emDetail * 0.8, 5.0);
+            pushBox(pos[0] - fwd[0] * 2.15, pos[1] - fwd[1] * 2.15, pos[2] - fwd[2] * 2.15, q, 1.7 * styleCfg.limbScale, 0.34, 1.4, styleCfg.horn, 0.32 + emDetail, 5.0);
+            pushBox(pos[0] - fwd[0] * 2.95, pos[1] - fwd[1] * 2.95, pos[2] - fwd[2] * 2.95, q, 0.75 * styleCfg.limbScale, 0.26, 1.2, [1.0, 0.94, 0.45], 0.48 + emDetail, 5.0);
           }
         }
       }
@@ -3198,8 +3244,12 @@
         const mid = mix3(nPts[n], nPts[n + 1], 0.5), segD = sub(nPts[n + 1], nPts[n]), segLen = Math.hypot(segD[0], segD[1], segD[2]);
         const nQ = quatFromBasis(segD, 0), taper = 1.0 - n * 0.12;
         pushBox(mid[0], mid[1], mid[2], nQ, 1.02 * taper, 1.04 * taper, segLen * 1.25, ruby, emBase * (1.1 + n * 0.08), 5.0);
-        // Blazing orange-gold anterior throat strip seamlessly climbing chest into jaw
         pushBox(mid[0] + fwd[0] * 0.34, mid[1] + fwd[1] * 0.34 - 0.15, mid[2] + fwd[2] * 0.34, nQ, 0.66 * taper, 0.34, segLen * 1.15, n < 2 ? flame : vermilion, emWing * (0.78 - n * 0.06), 5.0);
+        if (n <= 1) {
+          for (const cs of [-1, 1]) {
+            pushBox(mid[0] + right[0] * (cs * 0.66 * taper) - fwd[0] * 0.18, mid[1] + right[1] * (cs * 0.66 * taper), mid[2] + right[2] * (cs * 0.66 * taper) - fwd[2] * 0.18, nQ, 0.42, 0.28, 0.92, gold, emWing * 0.92, 5.0);
+          }
+        }
       }
 
       // Sharp Raptor Phoenix Skull, Hooked Gold Beak & Glowing Crown Plumes (Exact Match to Reference)
@@ -3233,8 +3283,13 @@
         const cd1 = sub(c2, c1);
         pushBox(c1[0], c1[1], c1[2], hQ, 0.24, 0.56, 0.34, flame, emWing, 5.0);
         pushBox(c2[0], c2[1], c2[2], quatFromBasis(cd1, 0), 0.20, 0.24, Math.hypot(...cd1) * 1.15, gold, emWing * 1.25, 5.0);
-        // Floating incandescent tip ember droplets
         pushBox(c2[0] - hFwd[0] * 0.42 + hUp[0] * (0.36 + bob * 0.6), c2[1] - hFwd[1] * 0.42 + hUp[1] * (0.36 + bob * 0.6), c2[2] - hFwd[2] * 0.42 + hUp[2] * (0.36 + bob * 0.6), hQ, 0.22, 0.22, 0.22, hot, emWing * 1.45, 5.0);
+      }
+      for (const s of [-1, 1]) {
+        for (let r = 0; r < 5; r++) {
+          const rBob = Math.sin(time * 5.0 - r * 0.55 + s * 1.2) * 0.14;
+          pushBox(headC[0] + hRight[0] * (0.34 + r * 0.14) * s - hFwd[0] * (0.48 + r * 0.36) + hUp[0] * (0.24 - r * 0.12 + rBob), headC[1] + hRight[1] * (0.34 + r * 0.14) * s - hFwd[1] * (0.48 + r * 0.36) + hUp[1] * (0.24 - r * 0.12 + rBob), headC[2] + hRight[2] * (0.34 + r * 0.14) * s - hFwd[2] * (0.48 + r * 0.36) + hUp[2] * (0.24 - r * 0.12 + rBob), hQ, 0.18, 0.16, 0.52, r >= 3 ? hot : gold, emWing * (0.95 + r * 0.12), 5.0);
+        }
       }
 
       // 4. MONUMENTAL M-ARCHED EAGLE-PHOENIX STEPPED VOXEL WINGS (Avian Biomechanical Downstroke + Alula + Magma Flame!)
@@ -3296,8 +3351,7 @@
           const b2 = [wp[0] + featherDir[0] * (bladeLen * 0.80), wp[1] + featherDir[1] * (bladeLen * 0.80), wp[2] + featherDir[2] * (bladeLen * 0.80)];
           const b3 = [wp[0] + featherDir[0] * (bladeLen * 1.04), wp[1] + featherDir[1] * (bladeLen * 1.04), wp[2] + featherDir[2] * (bladeLen * 1.04)];
 
-          // Overlapping stepped feather coverts & serrated glowing fire tips
-          pushBox(b0[0] + fUp[0] * 0.14, b0[1] + fUp[1] * 0.14, b0[2] + fUp[2] * 0.14, fQ, wBlade * 1.48, 0.34, bladeLen * 0.44, ruby, emBase * 0.98 + boostIntensity * 0.65, 5.0);
+          pushBox(b0[0] + fUp[0] * 0.14, b0[1] + fUp[1] * 0.14, b0[2] + fUp[2] * 0.14, fQ, wBlade * 1.48, 0.34, bladeLen * 0.44, k % 2 === 0 ? gold : ruby, emBase * 1.08 + boostIntensity * 0.65, 5.0);
           pushBox(b1[0], b1[1], b1[2], fQ, wBlade * 1.28, 0.26, bladeLen * 0.44, u < 0.35 ? ruby : vermilion, emBase * 1.32 + boostIntensity * 0.85, 5.0);
           pushBox(b2[0] - fUp[0] * 0.05, b2[1] - fUp[1] * 0.05, b2[2] - fUp[2] * 0.05, fQ, wBlade * 0.98, 0.22, bladeLen * 0.40, flame, emWing * 0.88, 5.0);
           pushBox(b3[0] - fUp[0] * 0.08, b3[1] - fUp[1] * 0.08, b3[2] - fUp[2] * 0.08, fQ, wBlade * 0.66, 0.18, bladeLen * 0.34, u > 0.48 ? gold : flame, emWing * 1.06, 5.0);
@@ -3353,20 +3407,285 @@
           const coreCol = sFrac < 0.38 ? ruby : (sFrac < 0.72 ? vermilion : flame);
           const rimCol = sFrac < 0.45 ? flame : (sFrac > 0.82 ? hot : gold);
           const width = (0.44 - sFrac * 0.14) * (seg >= ribLen - 2 ? 1.25 : 1.0);
-          // Stepped crimson feather spine + bright glowing gold-orange edges matching reference ribbon tail!
           pushBox(tp[0], tp[1], tp[2], segQ, width * 0.65, 0.22, 0.82, coreCol, emBase * (1.15 + sFrac * 0.5), 5.0);
           pushBox(tp[0], tp[1] - 0.04, tp[2], segQ, width * 1.15, 0.12, 0.74, rimCol, emWing * (0.75 + sFrac * 0.58), 5.0);
-          if (seg === ribLen - 1 && (rIdx === 0 || rIdx === 3 || rIdx === 6)) tailPoints.push(tp);
+          if (seg === ribLen - 1) {
+            pushBox(tp[0], tp[1] + 0.02, tp[2], segQ, width * 1.55, 0.18, 0.96, gold, emWing * 1.22, 5.0);
+            pushBox(tp[0], tp[1] + 0.06, tp[2], segQ, width * 0.72, 0.24, 0.48, rIdx % 2 === 0 ? hot : ruby, emWing * 1.50, 5.0);
+            if (rIdx === 0 || rIdx === 3 || rIdx === 6) tailPoints.push(tp);
+          }
           prevT = tp;
         }
       }
       return { chestCore: [hipC[0] + fwd[0] * 1.6, hipC[1] + fwd[1] * 1.6, hipC[2] + fwd[2] * 1.6], hipC, shoulders, wingMids, wingTips, tailPoints };
     }
 
+    const XUANWU_CFG = {
+      theta: 0.04, speed: 0.042, swimPhase: 0.0, snakePhase: 0.0,
+      orbitFn: th => [Math.cos(th) * 48.0, -7.5, Math.sin(th) * 44.5 + 1.5]
+    };
+
+    function drawXuanwu(xwCfg, time, nightGlowMult, boostIntensity = 0) {
+      const th = xwCfg.theta;
+      const baseP = xwCfg.orbitFn(th);
+      const aheadP = xwCfg.orbitFn(th + 0.05);
+      const flatF = norm3(sub(aheadP, baseP));
+      const rawR = norm3(cross([0, 1, 0], flatF));
+      const swP = xwCfg.swimPhase, snP = xwCfg.snakePhase;
+      const nightM = currentTimeMode === 'night' ? 1.52 : 1.0;
+
+      const bob = Math.sin(swP * 0.72) * 0.30;
+      const pitch = Math.sin(swP * 0.55) * 0.028;
+      const roll = Math.cos(swP * 0.48) * 0.024;
+      const cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const rawU0 = [0, 1, 0];
+      const pFwd = norm3([flatF[0] * cp + rawU0[0] * sp, flatF[1] * cp + rawU0[1] * sp, flatF[2] * cp + rawU0[2] * sp]);
+      const pUp = cross(pFwd, rawR);
+      const cr = Math.cos(roll), sr = Math.sin(roll);
+      const right = [rawR[0] * cr + pUp[0] * sr, rawR[1] * cr + pUp[1] * sr, rawR[2] * cr + pUp[2] * sr];
+      const up = [pUp[0] * cr - rawR[0] * sr, pUp[1] * cr - rawR[1] * sr, pUp[2] * cr - rawR[2] * sr];
+      const fwd = pFwd;
+      const shellQ = quatFromFrame(right, up, fwd);
+
+      const shellC = [baseP[0], baseP[1] + 2.05 + bob, baseP[2]];
+      const tShellDark = [0.06, 0.09, 0.16];
+      const tShellMid = [0.11, 0.18, 0.29];
+      const tGold = [0.90, 0.68, 0.22];
+      const tRune = [0.14, 0.90, 0.96];
+      const tEye = [0.35, 0.97, 1.00];
+      const tClaw = [0.88, 0.84, 0.66];
+      const emRune = (1.08 + boostIntensity * 0.45) * nightM;
+      const emGold = (0.18 + boostIntensity * 0.20) * nightM;
+
+      function xBox(f, r, u, sx, sy, sz, col, em = 0, st = 7.0, q = shellQ) {
+        pushBox(
+          shellC[0] + fwd[0] * f + right[0] * r + up[0] * u,
+          shellC[1] + fwd[1] * f + right[1] * r + up[1] * u,
+          shellC[2] + fwd[2] * f + right[2] * r + up[2] * u,
+          q, sx, sy, sz, col, em, st
+        );
+      }
+      function octTier(u, w, l, h, col) {
+        xBox(0.0, 0, u, w * 0.72, h, l, col, 0, 7.0);
+        xBox(0.0, 0, u, w, h, l * 0.72, col, 0, 7.0);
+      }
+
+      // Octagonal Plastron & Stepped Chamfered Carapace Dome
+      xBox(0.15, 0, -1.62, 5.2, 0.68, 6.8, tShellDark, 0, 7.0);
+      xBox(0.15, 0, -1.78, 4.0, 0.42, 5.8, tGold, emGold * 0.75, 5.0);
+      octTier(-0.85, 7.6, 8.6, 1.08, tShellDark);
+      octTier( 0.08, 6.6, 7.6, 0.98, tShellMid);
+      octTier( 0.92, 5.0, 6.0, 0.82, tShellDark);
+      octTier( 1.50, 3.4, 4.2, 0.52, tShellMid);
+
+      // 16 Sawtooth Perimeter Carapace Rim Scutes & Bronze Trim Plates
+      for (let k = 0; k < 16; k++) {
+        const ang = (k / 16) * Math.PI * 2;
+        const cf = Math.cos(ang), sf = Math.sin(ang);
+        const rf = cf * 4.35, rr = sf * 3.85;
+        const outDir = norm3([fwd[0] * cf + right[0] * sf - up[0] * 0.42, fwd[1] * cf + right[1] * sf - up[1] * 0.42, fwd[2] * cf + right[2] * sf - up[2] * 0.42]);
+        const rimR = norm3(cross(up, outDir));
+        const rimQ = quatFromFrame(rimR, cross(outDir, rimR), outDir);
+        xBox(rf, rr, -1.04, 1.08, 0.42, 1.24, tShellDark, 0, 7.0, rimQ);
+        xBox(rf * 1.04, rr * 1.04, -0.88, 1.14, 0.20, 0.42, tGold, emGold, 5.0, rimQ);
+        if (k % 2 === 0) xBox(rf * 0.96, rr * 0.96, -0.76, 0.40, 0.24, 0.48, tRune, emRune * 0.82, 5.0, rimQ);
+      }
+
+      // 3 Central Runic Carapace Plates + 6 Lateral Concentric Scutes with Cyan Engraved Glyphs
+      for (const cf of [-1.72, 0.0, 1.72]) {
+        xBox(cf, 0, 1.80, 2.30, 0.20, 1.54, tGold, emGold, 5.0);
+        xBox(cf, 0, 1.88, 1.92, 0.20, 1.24, tShellDark, 0, 7.0);
+        xBox(cf, 0, 1.94, 1.32, 0.18, 0.84, tRune, emRune, 5.0);
+        xBox(cf, 0, 1.98, 0.82, 0.18, 0.50, tShellDark, 0, 7.0);
+        xBox(cf, 0, 2.02, 0.34, 0.18, 0.24, tRune, emRune * 1.1, 5.0);
+      }
+      for (const side of [-1, 1]) {
+        const tiltQ = quatFromFrame(norm3([right[0] * 0.82 + up[0] * (0.57 * side), right[1] * 0.82 + up[1] * (0.57 * side), right[2] * 0.82 + up[2] * (0.57 * side)]), norm3([up[0] * 0.82 - right[0] * (0.57 * side), up[1] * 0.82 - right[1] * (0.57 * side), up[2] * 0.82 - right[2] * (0.57 * side)]), fwd);
+        for (const sf of [-1.92, 0.0, 1.92]) {
+          xBox(sf, side * 2.58, 0.62, 0.22, 1.72, 1.62, tGold, emGold, 5.0, tiltQ);
+          xBox(sf, side * 2.64, 0.65, 0.20, 1.38, 1.28, tShellDark, 0, 7.0, tiltQ);
+          xBox(sf, side * 2.70, 0.67, 0.18, 0.88, 0.82, tRune, emRune, 5.0, tiltQ);
+          xBox(sf, side * 2.73, 0.68, 0.16, 0.46, 0.44, tShellDark, 0, 7.0, tiltQ);
+        }
+      }
+
+      // Sculpted Ancient Tortoise Head, Gold Crown Glyph & Glowing Cyan Eyes
+      const hYaw = Math.sin(swP * 0.58) * 0.22;
+      const hPitch = Math.sin(swP * 0.92) * 0.08;
+      const hFwd = norm3([fwd[0] * Math.cos(hYaw) + right[0] * Math.sin(hYaw) + up[0] * hPitch, fwd[1] * Math.cos(hYaw) + right[1] * Math.sin(hYaw) + up[1] * hPitch, fwd[2] * Math.cos(hYaw) + right[2] * Math.sin(hYaw) + up[2] * hPitch]);
+      const hRight = norm3(cross(up, hFwd));
+      const hUp = cross(hFwd, hRight);
+      const hQ = quatFromFrame(hRight, hUp, hFwd);
+      xBox(4.35, 0, -0.76, 2.02, 1.50, 1.56, tShellDark, 0, 7.0);
+      xBox(5.05, hYaw * 0.35, -0.62, 1.92, 1.44, 1.38, tShellMid, 0, 7.0, hQ);
+      const thPos = [shellC[0] + fwd[0] * 5.82 + hFwd[0] * 0.52 - up[0] * 0.42, shellC[1] + fwd[1] * 5.82 + hFwd[1] * 0.52 - up[1] * 0.42, shellC[2] + fwd[2] * 5.82 + hFwd[2] * 0.52 - up[2] * 0.42];
+      function thBox(lf, lr, lu, sx, sy, sz, col, em = 0, st = 7.0) {
+        pushBox(thPos[0] + hFwd[0] * lf + hRight[0] * lr + hUp[0] * lu, thPos[1] + hFwd[1] * lf + hRight[1] * lr + hUp[1] * lu, thPos[2] + hFwd[2] * lf + hRight[2] * lr + hUp[2] * lu, hQ, sx, sy, sz, col, em, st);
+      }
+      thBox(0.0, 0, 0.16, 2.04, 1.34, 2.28, tShellDark, 0, 7.0);
+      thBox(0.95, 0, 0.08, 1.66, 1.12, 1.24, tShellDark, 0, 7.0);
+      thBox(1.42, 0, -0.14, 1.38, 0.62, 0.62, tShellMid, 0, 7.0);
+      thBox(0.32, 0, 0.88, 1.40, 0.24, 1.52, tGold, emGold * 1.15, 5.0);
+      thBox(0.28, 0, 0.94, 0.88, 0.20, 0.92, tShellDark, 0, 7.0);
+      thBox(0.45, 0, -0.68, 1.60, 0.46, 1.92, tShellMid, 0, 7.0);
+      for (const s of [-1, 1]) {
+        thBox(0.55, 1.04 * s, 0.24, 0.26, 0.40, 0.62, tEye, 2.6 * nightM, 5.0);
+        thBox(-0.35, 1.02 * s, 0.04, 0.22, 0.30, 0.78, tRune, emRune * 0.92, 5.0);
+        thBox(0.25, 0.86 * s, 0.72, 0.48, 0.36, 1.16, tShellMid, 0, 7.0);
+        thBox(-0.35, 0.88 * s, -0.35, 0.42, 0.56, 0.85, tShellDark, 0, 7.0);
+      }
+
+      // 4 Heavy Armored Swimming Flippers with Cyan Runic Forearm Scale Clusters & Hooked Ivory Claws
+      const legConfigs = [
+        [ 3.05, -2.85,  1, -1, 0.0],
+        [ 3.05,  2.85,  1,  1, Math.PI],
+        [-2.95, -2.75, -1, -1, Math.PI + 0.25],
+        [-2.95,  2.75, -1,  1, 0.25]
+      ];
+      for (const [lf, lr, fS, rS, phase] of legConfigs) {
+        const stroke = Math.sin(swP + phase), lift = Math.cos(swP + phase);
+        const shP = [shellC[0] + fwd[0] * lf + right[0] * lr - up[0] * 1.12, shellC[1] + fwd[1] * lf + right[1] * lr - up[1] * 1.12, shellC[2] + fwd[2] * lf + right[2] * lr - up[2] * 1.12];
+        const knP = [
+          shP[0] + fwd[0] * (fS * (1.18 + stroke * 0.75)) + right[0] * (rS * (1.45 - stroke * 0.22)) - up[0] * (0.45 - lift * 0.32),
+          shP[1] + fwd[1] * (fS * (1.18 + stroke * 0.75)) + right[1] * (rS * (1.45 - stroke * 0.22)) - up[1] * (0.45 - lift * 0.32),
+          shP[2] + fwd[2] * (fS * (1.18 + stroke * 0.75)) + right[2] * (rS * (1.45 - stroke * 0.22)) - up[2] * (0.45 - lift * 0.32)
+        ];
+        const ftP = [
+          knP[0] + fwd[0] * (0.82 * fS + stroke * 0.45) + right[0] * (rS * 0.52) - up[0] * (1.12 - Math.max(0, lift) * 0.38),
+          knP[1] + fwd[1] * (0.82 * fS + stroke * 0.45) + right[1] * (rS * 0.52) - up[1] * (1.12 - Math.max(0, lift) * 0.38),
+          knP[2] + fwd[2] * (0.82 * fS + stroke * 0.45) + right[2] * (rS * 0.52) - up[2] * (1.12 - Math.max(0, lift) * 0.38)
+        ];
+        const uD = sub(knP, shP), uM = mix3(shP, knP, 0.5);
+        const fD = sub(ftP, knP), fM = mix3(knP, ftP, 0.5);
+        const legQ = quatFromBasis(uD, 0);
+        const shinQ = quatFromBasis(fD, 0);
+        pushBox(uM[0], uM[1], uM[2], legQ, 1.38, 1.32, Math.hypot(...uD) * 1.15, tShellDark, 0, 7.0);
+        pushBox(fM[0], fM[1], fM[2], shinQ, 1.34, 1.24, Math.hypot(...fD) * 1.18, tShellDark, 0, 7.0);
+        for (const scFrac of [0.28, 0.54, 0.78]) {
+          const spPos = mix3(knP, ftP, scFrac);
+          pushBox(spPos[0] + right[0] * (rS * 0.54) + fwd[0] * (fS * 0.24), spPos[1] + right[1] * (rS * 0.54) + 0.14, spPos[2] + right[2] * (rS * 0.54) + fwd[2] * (fS * 0.24), shinQ, 0.38, 0.36, 0.42, tRune, emRune * 0.96, 5.0);
+        }
+        const padFwd = norm3([fwd[0] * 0.85 + right[0] * (rS * 0.45), fwd[1], fwd[2] * 0.85 + right[2] * (rS * 0.45)]);
+        const padR = norm3(cross(up, padFwd));
+        const padQ = quatFromFrame(padR, cross(padFwd, padR), padFwd);
+        pushBox(ftP[0], ftP[1], ftP[2], padQ, 1.56, 0.72, 1.52, tShellDark, 0, 7.0);
+        for (const cOff of [-0.52, -0.17, 0.17, 0.52]) {
+          pushBox(ftP[0] + padFwd[0] * 0.95 + padR[0] * cOff, ftP[1] - 0.10, ftP[2] + padFwd[2] * 0.95 + padR[2] * cOff, padQ, 0.24, 0.28, 0.62, tClaw, 0.08, 5.0);
+          pushBox(ftP[0] + padFwd[0] * 1.26 + padR[0] * cOff, ftP[1] - 0.28, ftP[2] + padFwd[2] * 1.26 + padR[2] * cOff, padQ, 0.18, 0.26, 0.24, tClaw, 0.10, 5.0);
+        }
+      }
+
+      // Spiked Tortoise Tail
+      for (let t = 0; t < 4; t++) {
+        const ts = Math.sin(swP * 0.95 - t * 0.55) * (0.28 + t * 0.16);
+        const sc = 1.0 - t * 0.18;
+        xBox(-4.25 - t * 0.70, ts, -1.14 - t * 0.12, 0.95 * sc, 0.72 * sc, 0.92, tShellDark, 0, 7.0);
+        if (t % 2 === 0) xBox(-4.25 - t * 0.70, ts + 0.18, -0.74 - t * 0.12, 0.28, 0.30, 0.34, tGold, emGold, 5.0);
+      }
+
+      // Snugly Hugging Jade-Gold Coiled Guardian Serpent + Towering S-Neck & Fanged Viper Head
+      const sJade = [0.14, 0.68, 0.42], sTeal = [0.08, 0.54, 0.56], sGold = [0.94, 0.78, 0.24];
+      const sBelly = [0.84, 0.88, 0.64], sEye = [1.00, 0.46, 0.08], sMouth = [0.82, 0.14, 0.18];
+      const N_S = 44;
+      const sPts = new Array(N_S);
+      const sCtrl = [
+        [-3.95, -2.05, -0.75],
+        [-1.45, -3.95, -0.35],
+        [ 1.65, -3.65,  0.92],
+        [ 3.15, -0.45,  2.05],
+        [ 2.15,  3.55,  1.15],
+        [-0.55,  4.05, -0.55],
+        [-2.95,  2.65,  1.55],
+        [-3.25,  0.25,  3.25],
+        [-1.35, -0.35,  5.15],
+        [ 1.55,  0.05,  6.25]
+      ];
+      function sampleSerpentLocal(u) {
+        const scaled = clamp(u, 0, 1) * (sCtrl.length - 1);
+        const i = Math.min(sCtrl.length - 2, Math.floor(scaled));
+        const t = scaled - i, t2 = t * t, t3 = t2 * t;
+        const p0 = sCtrl[Math.max(0, i - 1)], p1 = sCtrl[i], p2 = sCtrl[i + 1], p3 = sCtrl[Math.min(sCtrl.length - 1, i + 2)];
+        return [
+          0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+          0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
+          0.5 * ((2 * p1[2]) + (-p0[2] + p2[2]) * t + (2 * p0[2] - 5 * p1[2] + 4 * p2[2] - p3[2]) * t2 + (-p0[2] + 3 * p1[2] - 3 * p2[2] + p3[2]) * t3)
+        ];
+      }
+
+      for (let i = 0; i < N_S; i++) {
+        const u = i / (N_S - 1);
+        const [lf, lr, lu] = sampleSerpentLocal(u);
+        const coilPulse = Math.sin(snP * 1.85 - u * 12.0);
+        const neckW = smoothstep(0.66, 0.96, u);
+        const swayR = neckW * Math.sin(snP * 1.15) * 0.84 + (1.0 - neckW) * coilPulse * 0.06;
+        const lungeF = neckW * Math.cos(snP * 2.1) * 0.36;
+        const fC = lf + lungeF, rC = lr + swayR, uC = lu + coilPulse * (0.05 + neckW * 0.20);
+        sPts[i] = [
+          shellC[0] + fwd[0] * fC + right[0] * rC + up[0] * uC,
+          shellC[1] + fwd[1] * fC + right[1] * rC + up[1] * uC,
+          shellC[2] + fwd[2] * fC + right[2] * rC + up[2] * uC
+        ];
+      }
+
+      for (let i = 0; i < N_S - 1; i++) {
+        const u = i / (N_S - 1);
+        const p0 = sPts[i], p1 = sPts[i + 1];
+        const segD = sub(p1, p0), segLen = Math.hypot(segD[0], segD[1], segD[2]) || 0.18;
+        const tang = norm3(segD);
+        const rawCross = cross(up, tang);
+        const sR = Math.hypot(rawCross[0], rawCross[1], rawCross[2]) > 0.12 ? norm3(rawCross) : right;
+        const sU = norm3(cross(tang, sR));
+        const sq = quatFromFrame(sR, sU, tang);
+        const tailTaper = smoothstep(0.0, 0.14, u);
+        const rad = (0.14 + 0.56 * Math.sin(Math.pow(u, 0.68) * Math.PI * 0.88)) * mix(0.55, 1.0, tailTaper);
+        const colMain = i % 2 === 0 ? sJade : sTeal;
+        const mPos = mix3(p0, p1, 0.5);
+        pushBox(mPos[0], mPos[1], mPos[2], sq, rad * 1.46, rad * 1.40, segLen * 1.24, colMain, 0.06, 7.0);
+        pushBox(mPos[0] - sU[0] * rad * 0.48, mPos[1] - sU[1] * rad * 0.48, mPos[2] - sU[2] * rad * 0.48, sq, rad * 1.10, rad * 0.54, segLen * 1.16, sBelly, 0.05, 7.0);
+        const goldSide = (i % 2 === 0 ? 1 : -1) * rad * 0.66;
+        pushBox(mPos[0] + sR[0] * goldSide + sU[0] * rad * 0.22, mPos[1] + sR[1] * goldSide + sU[1] * rad * 0.22, mPos[2] + sR[2] * goldSide + sU[2] * rad * 0.22, sq, rad * 0.34, rad * 0.58, segLen * 0.88, sGold, emGold * 1.1, 5.0);
+      }
+
+      // Serpent Viper Head, Raised Brow Plates, Amber Eyes & Fanged Open Hiss + Forked Tongue
+      const shEnd = sPts[N_S - 1], shPrev = sPts[N_S - 2];
+      const skBaseFwd = norm3(sub(shEnd, shPrev));
+      const skTargetF = norm3([fwd[0] * 0.82 + right[0] * Math.sin(snP * 0.95) * 0.38 - up[0] * 0.14, fwd[1] * 0.82 + right[1] * Math.sin(snP * 0.95) * 0.38 - up[1] * 0.14, fwd[2] * 0.82 + right[2] * Math.sin(snP * 0.95) * 0.38 - up[2] * 0.14]);
+      const skFwd = norm3(mix3(skBaseFwd, skTargetF, 0.62));
+      const skRight = norm3(cross(up, skFwd)), skUp = cross(skFwd, skRight);
+      const skQ = quatFromFrame(skRight, skUp, skFwd);
+      const hissOpen = 0.26 + Math.pow(Math.max(0, Math.sin(snP * 0.85)), 3.0) * 0.65;
+      function sHBox(lf, lr, lu, sx, sy, sz, col, em = 0, st = 7.0, q = skQ) {
+        pushBox(shEnd[0] + skFwd[0] * lf + skRight[0] * lr + skUp[0] * lu, shEnd[1] + skFwd[1] * lf + skRight[1] * lr + skUp[1] * lu, shEnd[2] + skFwd[2] * lf + skRight[2] * lr + skUp[2] * lu, q, sx, sy, sz, col, em, st);
+      }
+      sHBox(0.35, 0, 0.18, 1.48, 0.72, 1.56, sJade, 0.08);
+      sHBox(0.95, 0, 0.16, 1.12, 0.56, 0.98, sTeal, 0.08);
+      sHBox(0.55, 0, 0.52, 0.82, 0.24, 1.05, sGold, emGold * 1.2, 5.0);
+      const sjFwd = norm3([skFwd[0] - skUp[0] * (0.28 + hissOpen * 0.52), skFwd[1] - skUp[1] * (0.28 + hissOpen * 0.52), skFwd[2] - skUp[2] * (0.28 + hissOpen * 0.52)]);
+      const sjQ = quatFromFrame(skRight, cross(sjFwd, skRight), sjFwd);
+      sHBox(0.65, 0, -0.32 - hissOpen * 0.38, 1.04, 0.34, 1.32, sTeal, 0.06, 7.0, sjQ);
+      sHBox(0.75, 0, -0.18 - hissOpen * 0.16, 0.68, 0.22, 0.86, sMouth, 0.24, 5.0, sjQ);
+      sHBox(1.42, 0, -0.22 - hissOpen * 0.22, 0.20, 0.12, 0.65, [0.96, 0.18, 0.28], 0.32, 5.0, sjQ);
+      for (const s of [-1, 1]) {
+        sHBox(0.62, 0.64 * s, 0.44, 0.34, 0.28, 0.72, sTeal, 0.08);
+        sHBox(0.68, 0.66 * s, 0.22, 0.20, 0.26, 0.36, sEye, 2.6 * nightM, 5.0);
+        sHBox(1.22, 0.32 * s, -0.16, 0.14, 0.38, 0.14, [0.99, 0.98, 0.94], 0.18, 5.0);
+      }
+
+      // Swirling Cyan-White Mist Ripples & Buoyancy Wake around Tortoise Hull
+      for (let w = 0; w < 8; w++) {
+        const wf = ((time * 0.45 + w / 8) % 1.0);
+        const wBack = -1.5 - wf * 7.8;
+        const wLat = (w % 2 === 0 ? 1 : -1) * (2.6 + wf * 3.8 + Math.sin(time * 2.0 + w) * 0.5);
+        const wScale = 1.8 + wf * 3.2;
+        pushWxBox(shellC[0] + fwd[0] * wBack + right[0] * wLat, baseP[1] + 0.15 + wf * 0.6, shellC[2] + fwd[2] * wBack + right[2] * wLat, ID_Q, wScale, 0.48, wScale, [0.46, 0.88, 0.96], 0.14 * (1 - wf) * nightM, 3.0);
+      }
+      return { shellC, fwd, right, up, serpentHead: shEnd };
+    }
+
     const SNOW_QUATS = Array.from({ length: 24 }, () => [0, 0, 0, 1]);
-    const lightPosBuf = new Float32Array(39);
-    const lightColBuf = new Float32Array(39);
-    const lightRangeBuf = new Float32Array(13);
+    const lightPosBuf = new Float32Array(42);
+    const lightColBuf = new Float32Array(42);
+    const lightRangeBuf = new Float32Array(14);
 
     let lastRealTime = null, perfFrameIdx = 0;
     function frame(now) {
@@ -3395,14 +3714,14 @@
           pendingGpuQ.shift();
           const ns = gl.getQueryParameter(qp, gl.QUERY_RESULT);
           gl.deleteQuery(qp);
-          if (ns > 0 && ns < 250000000) {
+          if (ns > 0 && ns < 250000000 && perfFrameIdx > 16) {
             gpuMsSmooth = gpuMsSmooth * 0.78 + (ns * 1e-6) * 0.22;
             if (now - lastScaleAdjust > 850) {
-              if (gpuMsSmooth > 12.2 && dynResScale > 0.58) {
+              if (gpuMsSmooth > 15.8 && dynResScale > 0.58) {
                 dynResScale = Math.max(0.58, +(dynResScale - 0.08).toFixed(2));
                 lastScaleAdjust = now;
                 resize();
-              } else if (gpuMsSmooth < 7.0 && dynResScale < 1.0 && now - lastScaleAdjust > 1800) {
+              } else if (gpuMsSmooth < 12.8 && dynResScale < 1.0 && now - lastScaleAdjust > 1800) {
                 dynResScale = Math.min(1.0, +(dynResScale + 0.04).toFixed(2));
                 lastScaleAdjust = now;
                 resize();
@@ -3410,7 +3729,7 @@
             }
           }
         }
-        if (perfFrameIdx >= 2 && (perfFrameIdx & 3) === 0 && pendingGpuQ.length < 3) {
+        if (perfFrameIdx >= 16 && (perfFrameIdx & 3) === 0 && pendingGpuQ.length < 3) {
           activeGpuQ = gl.createQuery();
           gl.beginQuery(timerExt.TIME_ELAPSED_EXT, activeGpuQ);
         }
@@ -3593,6 +3912,9 @@
       }`;
 
       if (playing) {
+        XUANWU_CFG.theta += XUANWU_CFG.speed * (1.0 + boostRamp * 0.85) * dt;
+        XUANWU_CFG.swimPhase += dt * (1.75 + boostRamp * 0.95);
+        XUANWU_CFG.snakePhase += dt * (1.35 + boostRamp * 0.85);
         const pairList = [
           [DRAGON_CONFIGS.green, poseGreen.active ? poseGreen.swimBoost : 0],
           [DRAGON_CONFIGS.white, poseWhite.active ? poseWhite.swimBoost : 0],
@@ -3825,7 +4147,20 @@
       let eye;
       if (currentCamMode === 'dragon') {
         let desiredTarget, desiredEye;
-        if (followDragonKey === 'phoenix') {
+        if (followDragonKey === 'xuanwu') {
+          const xBase = XUANWU_CFG.orbitFn(XUANWU_CFG.theta);
+          const xAh = XUANWU_CFG.orbitFn(XUANWU_CFG.theta + 0.05);
+          const xF = norm3(sub(xAh, xBase));
+          const xR = norm3(cross([0, 1, 0], xF));
+          const rlX = Math.hypot(xBase[0], xBase[2]) || 1;
+          const outRad = [xBase[0] / rlX, 0, xBase[2] / rlX];
+          desiredTarget = [xBase[0], xBase[1] + 3.4, xBase[2]];
+          desiredEye = [
+            xBase[0] + xF[0] * 13.5 + outRad[0] * 15.8,
+            xBase[1] + 8.6,
+            xBase[2] + xF[2] * 13.5 + outRad[2] * 15.8
+          ];
+        } else if (followDragonKey === 'phoenix') {
           if (phoenixTime < 0) {
             const perchR = norm3(cross([0, 1, 0], perchFwd));
             const pb = 11.2 + boostRamp * 4.4;
@@ -3911,6 +4246,7 @@
       drawDragon(skelBlack, DRAGON_STYLES.black, jawOpenBlack, DRAGON_CONFIGS.black.limbPhase, boostRamp);
 
       const nightGlowMult = currentTimeMode === 'night' ? 1.58 : 1.0;
+      const xwMarks = drawXuanwu(XUANWU_CFG, simTime, nightGlowMult, boostRamp);
       const phMarks = drawPhoenix(phPos, phFwd, phStancePitch, phRoll, phWingSpread, phWingFlap, phHeadYaw, phHeadPitch, phoenixJawOpen, phFlyIntensity, simTime, nightGlowMult, boostRamp);
 
       // 3-Dragon 5-Strand Elemental Aura Trails (125u+ Tail-Wake + Flanks) & Blazing Molten Lava Dripping Phoenix during Bức Tốc (H)
@@ -4363,7 +4699,7 @@
 
       let lightCount = 0;
       function pushDynLight(px, py, pz, r, g, b, maxR2) {
-        if (lightCount >= 13 || r + g + b < 0.015) return;
+        if (lightCount >= 14 || r + g + b < 0.015) return;
         const o = lightCount * 3;
         lightPosBuf[o] = px; lightPosBuf[o + 1] = py; lightPosBuf[o + 2] = pz;
         lightColBuf[o] = r; lightColBuf[o + 1] = g; lightColBuf[o + 2] = b;
@@ -4385,6 +4721,7 @@
       if (convBoost > 0.01) pushDynLight(CONVERGE_POINT[0], CONVERGE_POINT[1], CONVERGE_POINT[2], 2.8 * convBoost, 2.2 * convBoost, 2.8 * convBoost, 920.0);
       if (fireInt > 0.01) pushDynLight(gMouth[0] + gFwd[0] * 6, gMouth[1] + gFwd[1] * 6, gMouth[2] + gFwd[2] * 6, 3.0 * fireInt * f0, 1.35 * fireInt * f0, 0.28 * fireInt * f0, 780.0);
       if (isFiringBlack) pushDynLight(bHead[0] + bFwd[0] * 6, bHead[1] + bFwd[1] * 6, bHead[2] + bFwd[2] * 6, 2.6 * f1, 1.4 * f1, 3.4 * f1, 780.0);
+      pushDynLight(xwMarks.shellC[0], xwMarks.shellC[1] + 2.4, xwMarks.shellC[2], 0.32 * nightGlowMult, 1.45 * nightGlowMult, 1.65 * nightGlowMult, 760.0);
 
       gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
       if (cachedShadowMode !== currentTimeMode) {
@@ -4522,6 +4859,7 @@
       gl.uniform1i(uComp.uScene, 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomTex2);
       gl.uniform1i(uComp.uBloom, 1);
+      gl.uniform2f(uComp.uTexel, 1.0 / fboW, 1.0 / fboH);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       if (activeGpuQ) {
