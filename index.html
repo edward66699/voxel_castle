@@ -99,6 +99,9 @@
       <div id="hud-tap-pill" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-11 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-950/85 text-white/95 text-[11px] border border-white/20 z-10 whitespace-nowrap"></div>
 
       <div class="absolute top-2 right-2 flex items-center gap-1 z-10">
+        <button id="btn-shot-hud" title="Chụp ảnh màn hình PNG" class="hidden px-2 py-1 rounded-md bg-slate-950/35 hover:bg-slate-950/85 text-white/80 text-[11px] border border-white/15 transition">
+          Chụp
+        </button>
         <button id="btn-hud" title="Ẩn/Hiện giao diện (U)" class="px-2 py-1 rounded-md bg-slate-950/75 hover:bg-slate-900/90 text-white/95 text-[11px] border border-white/15 transition">
           Ẩn UI
         </button>
@@ -117,7 +120,7 @@
       </div>
 
       <div id="hud-keys-hint" class="hidden md:block pointer-events-none absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-950/75 text-white/85 text-[11px] border border-white/15 transition-opacity duration-200">
-        F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc · X Huyền Vũ · U Ẩn UI
+        1-6 Góc · F Lửa · T Tuyết · S Sét · G Hợp Kích · P Phượng · H Bức Tốc · X Huyền Vũ · U Ẩn UI
       </div>
     </div>
 
@@ -155,6 +158,7 @@
           <button id="btn-fire" class="pill-btn px-1.5 py-0.5 rounded border border-amber-500/60 bg-amber-500/15 hover:bg-amber-500/30 text-amber-500 font-semibold">Lửa (F)</button>
           <button id="btn-snow" class="pill-btn px-1.5 py-0.5 rounded border border-cyan-500/60 bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-400 font-semibold">Tuyết (T)</button>
           <button id="btn-bolt" class="pill-btn px-1.5 py-0.5 rounded border border-violet-500/60 bg-violet-500/15 hover:bg-violet-500/30 text-violet-400 font-semibold">Sét (S)</button>
+          <button id="btn-shot" title="Chụp ảnh màn hình PNG" class="pill-btn px-1.5 py-0.5 rounded border border-sky-400/50 bg-sky-500/15 hover:bg-sky-500/30 text-sky-300 font-medium">Chụp</button>
           <button id="toggle-play" class="pill-btn px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--secondary)] text-[var(--secondary-foreground)] font-medium">Dừng</button>
         </div>
       </div>
@@ -1408,10 +1412,15 @@
         vec3 skyRefl = mix(uFogHorizon * 1.08, uAmbientColor * 1.75 + uSunColor * 0.22, clamp(R.y * 1.65, 0.0, 1.0));
         wCol = mix(wCol, skyRefl, fres * 0.64);
 
-        float specTight = pow(max(dot(N, H), 0.0), 210.0) * 2.45;
-        float specBroad = pow(max(dot(N, H), 0.0), 38.0) * 0.38;
-        float glitterFacet = smoothstep(0.25, 0.92, capRipple) * pow(max(dot(N, H), 0.0), 72.0) * 0.95;
-        vec3 sunSpec = uSunColor * (specTight + specBroad + glitterFacet) * (0.25 + 0.75 * sh);
+        vec2 reflXZ = normalize(vec2(R.x, R.z) + vec2(1e-5));
+        vec2 sunXZ = normalize(vec2(L.x, L.z) + vec2(1e-5));
+        float glitterPath = pow(max(dot(reflXZ, sunXZ), 0.0), 14.0) * smoothstep(-0.08, 0.45, R.y);
+        float nightTint = smoothstep(0.65, 0.25, uAmbientColor.r);
+        vec3 moonCol = mix(uSunColor, vec3(0.76, 0.88, 1.00), nightTint * 0.72);
+        float specTight = pow(max(dot(N, H), 0.0), 210.0) * 2.55;
+        float specBroad = pow(max(dot(N, H), 0.0), 38.0) * 0.42;
+        float glitterFacet = smoothstep(0.22, 0.90, capRipple) * (pow(max(dot(N, H), 0.0), 64.0) * 1.05 + glitterPath * (0.48 + nightTint * 0.65));
+        vec3 sunSpec = moonCol * (specTight + specBroad + glitterFacet) * (0.30 + 0.70 * sh);
         wCol += sunSpec;
 
         for (int i = 0; i < 6; i++) {
@@ -2891,10 +2900,12 @@
     const shockwaveParticles = [];
     const darkAuraParticles = [];
     const phoenixFlameParticles = [];
+    const phoenixFeathers = [];
     const dragonBoostTrails = { green: [], white: [], black: [] };
     const dragonBoostSparks = [];
     const magmaLavaParticles = [];
     const moltenDripParticles = [];
+    let phoenixFeatherAccum = 0;
 
     let fireBurstTimer = 0, fireKeyHeld = false, fireEmitAccum = 0, needFireBurst = false;
     let snowBurstTimer = 0, snowKeyHeld = false, needSnowBurst = false;
@@ -3401,18 +3412,45 @@
     };
     const SPIRIT_LABELS = { green: 'Thanh Long', white: 'Bạch Long', black: 'Hắc Long', phoenix: 'Phượng Hoàng', xuanwu: 'Huyền Vũ' };
     let lastCamVP = null, lastProjM5 = 2.6, lastTapTimer = 0;
+    let lastCamEye = [0, 38, 102], lastCamTarget = [0, 14, 2];
+    let camTween = null, pendingScreenshot = false;
     const spiritPickAnchors = [];
 
-    function applyCamPreset(mode) {
+    function getCamPresetTarget(mode) {
       const camAsp = (canvas.clientWidth || window.innerWidth) / Math.max(canvas.clientHeight || window.innerHeight, 1);
       const isPort = camAsp < 1.0;
-      if (mode === 'render') { cam.yaw = isPort ? 0.50 : 0.46; cam.pitch = isPort ? 0.27 : 0.24; cam.dist = isPort ? 174 : (window.innerWidth < 768 ? 124 : 104); cam.target = isPort ? [6, 9, -2] : [0, 14, 2]; }
-      else if (mode === 'overview') { cam.yaw = 0.56; cam.pitch = 0.28; cam.dist = Math.round(108 * (isPort ? 1.62 : 1.0)); cam.target = isPort ? [4, 10, -1] : [2, 13, 0]; }
-      else if (mode === 'courtyard') { cam.yaw = 0.24; cam.pitch = 0.24; cam.dist = isPort ? 34 : 23; cam.target = [0.0, 6.8, 10.5]; }
-      else if (mode === 'waterfall') { cam.yaw = -0.26; cam.pitch = 0.16; cam.dist = Math.round(52 * (isPort ? 1.48 : 1.0)); cam.target = [-6, 4, 20]; }
-      else if (mode === 'pagoda') { cam.yaw = 0.92; cam.pitch = 0.20; cam.dist = Math.round(70 * (isPort ? 1.46 : 1.0)); cam.target = [24, 15, -10]; }
+      if (mode === 'render') return { yaw: isPort ? 0.50 : 0.46, pitch: isPort ? 0.27 : 0.24, dist: isPort ? 174 : (window.innerWidth < 768 ? 124 : 104), target: isPort ? [6, 9, -2] : [0, 14, 2] };
+      if (mode === 'overview') return { yaw: 0.56, pitch: 0.28, dist: Math.round(108 * (isPort ? 1.62 : 1.0)), target: isPort ? [4, 10, -1] : [2, 13, 0] };
+      if (mode === 'courtyard') return { yaw: 0.24, pitch: 0.24, dist: isPort ? 34 : 23, target: [0.0, 6.8, 10.5] };
+      if (mode === 'waterfall') return { yaw: -0.26, pitch: 0.16, dist: Math.round(52 * (isPort ? 1.48 : 1.0)), target: [-6, 4, 20] };
+      if (mode === 'pagoda') return { yaw: 0.92, pitch: 0.20, dist: Math.round(70 * (isPort ? 1.46 : 1.0)), target: [24, 15, -10] };
+      return null;
     }
-    if (currentCamMode !== 'render' && currentCamMode !== 'dragon') applyCamPreset(currentCamMode);
+
+    function syncCamFromEyeTarget(eyePos, tgtPos) {
+      const dx = eyePos[0] - tgtPos[0], dy = eyePos[1] - tgtPos[1], dz = eyePos[2] - tgtPos[2];
+      const d = Math.max(16, Math.hypot(dx, dy, dz));
+      cam.yaw = Math.atan2(dx, dz);
+      cam.pitch = clamp(Math.asin(clamp(dy / d, -0.98, 0.98)), -0.35, 1.38);
+      cam.dist = clamp(d, 16, 225);
+      cam.target = [tgtPos[0], tgtPos[1], tgtPos[2]];
+    }
+
+    function applyCamPreset(mode, immediate = true) {
+      const dst = getCamPresetTarget(mode);
+      if (!dst) return;
+      if (immediate) {
+        camTween = null;
+        cam.yaw = dst.yaw; cam.pitch = dst.pitch; cam.dist = dst.dist; cam.target = [...dst.target];
+      } else {
+        camTween = {
+          t: 0, dur: 0.52,
+          sYaw: cam.yaw, sPitch: cam.pitch, sDist: cam.dist, sTarget: [...cam.target],
+          eYaw: cam.yaw + wrapAngle(dst.yaw - cam.yaw), ePitch: dst.pitch, eDist: dst.dist, eTarget: [...dst.target]
+        };
+      }
+    }
+    if (currentCamMode !== 'render' && currentCamMode !== 'dragon') applyCamPreset(currentCamMode, true);
 
     function pickSpiritAt(clientX, clientY) {
       if (!lastCamVP || spiritPickAnchors.length === 0) return null;
@@ -3437,13 +3475,43 @@
       return bestKey;
     }
 
-    function showTapFlash(key) {
+    function showToast(msg) {
       const pill = document.getElementById('hud-tap-pill');
       if (!pill) return;
-      pill.textContent = `Đang theo: ${SPIRIT_LABELS[key] || key}`;
+      pill.textContent = msg;
       pill.classList.remove('opacity-0');
       clearTimeout(lastTapTimer);
       lastTapTimer = setTimeout(() => pill.classList.add('opacity-0'), 1800);
+    }
+    function showTapFlash(key) { showToast(`Đang theo: ${SPIRIT_LABELS[key] || key}`); }
+
+    function selectDragonFollow(key) {
+      followDragonKey = key;
+      if (currentCamMode !== 'dragon') {
+        followEyeSmooth = [...lastCamEye];
+        followFocusSmooth = [...lastCamTarget];
+        followSmoothInit = true;
+      }
+      camTween = null;
+      currentCamMode = 'dragon';
+      syncCamButtons(); syncFollowButtons();
+    }
+
+    function selectCamMode(mode) {
+      const prevMode = currentCamMode;
+      currentCamMode = mode;
+      if (mode === 'dragon') {
+        if (prevMode !== 'dragon') {
+          followEyeSmooth = [...lastCamEye];
+          followFocusSmooth = [...lastCamTarget];
+          followSmoothInit = true;
+        }
+        camTween = null;
+      } else {
+        if (prevMode === 'dragon') syncCamFromEyeTarget(lastCamEye, lastCamTarget);
+        applyCamPreset(mode, false);
+      }
+      syncCamButtons(); syncFollowButtons();
     }
 
     const activePtrs = new Map();
@@ -3451,6 +3519,7 @@
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
+      camTween = null;
       canvas.setPointerCapture(e.pointerId);
       activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (activePtrs.size === 1) {
@@ -3509,18 +3578,14 @@
       if (isTap) {
         const hitKey = pickSpiritAt(e.clientX, e.clientY);
         if (hitKey) {
-          followDragonKey = hitKey;
-          currentCamMode = 'dragon';
-          followSmoothInit = false;
-          syncCamButtons();
-          syncFollowButtons();
+          selectDragonFollow(hitKey);
           showTapFlash(hitKey);
         }
       }
     }
     canvas.addEventListener('pointerup', releasePtr);
     canvas.addEventListener('pointercancel', releasePtr);
-    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 225); }, { passive: false });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); camTween = null; cam.dist = clamp(cam.dist + e.deltaY * 0.05, 16, 225); }, { passive: false });
 
     function syncTimeButtons() {
       document.querySelectorAll('.time-btn').forEach(b => {
@@ -3567,24 +3632,26 @@
     syncFollowButtons();
 
     document.querySelectorAll('.follow-btn').forEach(btn => btn.addEventListener('click', () => {
-      followDragonKey = btn.dataset.follow;
-      currentCamMode = 'dragon';
-      followSmoothInit = false;
-      syncCamButtons(); syncFollowButtons();
+      selectDragonFollow(btn.dataset.follow);
     }));
 
     document.querySelectorAll('.cam-btn').forEach(btn => btn.addEventListener('click', () => {
-      currentCamMode = btn.dataset.cam;
-      if (currentCamMode !== 'dragon') applyCamPreset(currentCamMode);
-      syncCamButtons(); syncFollowButtons();
+      selectCamMode(btn.dataset.cam);
     }));
 
     const btnHud = document.getElementById('btn-hud');
+    const btnShot = document.getElementById('btn-shot');
+    const btnShotHud = document.getElementById('btn-shot-hud');
+    function triggerScreenshot() { pendingScreenshot = true; showToast('Đang lưu ảnh PNG...'); }
+    if (btnShot) btnShot.addEventListener('click', triggerScreenshot);
+    if (btnShotHud) btnShotHud.addEventListener('click', triggerScreenshot);
+
     let hudHidden = location.hash.includes('hud=off');
     function setHudHidden(next) {
       hudHidden = !!next;
       const ctrl = document.getElementById('controls-wrap');
       if (ctrl) ctrl.classList.toggle('hidden', hudHidden);
+      if (btnShotHud) btnShotHud.classList.toggle('hidden', !hudHidden);
       for (const id of ['hud-top-badge', 'hud-follow-bar', 'hud-keys-hint']) {
         const el = document.getElementById(id);
         if (el) {
@@ -3601,7 +3668,12 @@
       requestAnimationFrame(resize);
     }
     if (btnHud) btnHud.addEventListener('click', () => setHudHidden(!hudHidden));
-    window.addEventListener('keydown', e => { if ((e.key === 'u' || e.key === 'U') && !e.repeat) setHudHidden(!hudHidden); });
+    const CAM_NUM_MAP = { '1': 'render', '2': 'overview', '3': 'courtyard', '4': 'dragon', '5': 'waterfall', '6': 'pagoda' };
+    window.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      if (e.key === 'u' || e.key === 'U') setHudHidden(!hudHidden);
+      else if (CAM_NUM_MAP[e.key]) selectCamMode(CAM_NUM_MAP[e.key]);
+    });
     if (hudHidden) setHudHidden(true);
 
     const togglePlayBtn = document.getElementById('toggle-play');
@@ -5012,6 +5084,86 @@
       }
     }
 
+    const KOI_SCHOOL = [
+      { cx: -25.5 * VS, cz: 69.5 * VS, rx: 2.35, rz: 0.72, spd: 0.56, ph: 0.2, c1: [0.98, 0.36, 0.08], c2: [0.98, 0.97, 0.94], sc: 1.08 },
+      { cx: -25.5 * VS, cz: 69.5 * VS, rx: 1.80, rz: 0.54, spd: -0.62, ph: 2.4, c1: [0.98, 0.78, 0.14], c2: [0.98, 0.95, 0.82], sc: 0.96 },
+      { cx: -25.5 * VS, cz: 69.5 * VS, rx: 2.10, rz: 0.65, spd: 0.48, ph: 4.5, c1: [0.96, 0.96, 0.95], c2: [0.92, 0.18, 0.12], sc: 1.02 },
+      { cx: -15.5 * VS, cz: 63.0 * VS, rx: 1.25, rz: 1.02, spd: 0.64, ph: 0.9, c1: [0.98, 0.42, 0.10], c2: [0.99, 0.97, 0.92], sc: 1.04 },
+      { cx: -15.5 * VS, cz: 63.0 * VS, rx: 0.92, rz: 0.78, spd: -0.54, ph: 3.6, c1: [0.96, 0.95, 0.92], c2: [0.96, 0.32, 0.10], sc: 0.92 },
+      { cx: -15.5 * VS, cz: 63.0 * VS, rx: 1.15, rz: 0.95, spd: 0.50, ph: 5.2, c1: [0.98, 0.74, 0.12], c2: [0.18, 0.18, 0.22], sc: 0.98 },
+      { cx:  15.0 * VS, cz: 67.0 * VS, rx: 1.65, rz: 1.02, spd: 0.58, ph: 1.3, c1: [0.98, 0.34, 0.08], c2: [0.99, 0.98, 0.94], sc: 1.06 },
+      { cx:  15.0 * VS, cz: 67.0 * VS, rx: 1.22, rz: 0.76, spd: -0.66, ph: 3.1, c1: [0.97, 0.80, 0.16], c2: [0.98, 0.97, 0.90], sc: 0.94 },
+      { cx:  15.0 * VS, cz: 67.0 * VS, rx: 1.48, rz: 0.88, spd: 0.46, ph: 5.0, c1: [0.96, 0.96, 0.95], c2: [0.92, 0.20, 0.14], sc: 1.00 }
+    ];
+
+    const BUTTERFLIES = Array.from({ length: 12 }, (_, i) => {
+      const tr = SAKURA_TREES[i % SAKURA_TREES.length];
+      return {
+        cx: tr[0] + (hash3(i, 61, 1) - 0.5) * 4.2,
+        cy: tr[1] - 0.8 + hash3(i, 62, 2) * 3.0,
+        cz: tr[2] + (hash3(i, 63, 3) - 0.5) * 4.2,
+        rad: 1.1 + hash3(i, 64, 4) * 1.8,
+        spd: 0.85 + hash3(i, 65, 5) * 0.75,
+        ph: hash3(i, 66, 6) * 6.28,
+        col: i % 3 === 0 ? [1.0, 0.88, 0.45] : (i % 3 === 1 ? [1.0, 0.78, 0.90] : [0.76, 0.95, 1.0])
+      };
+    });
+
+    function drawWildlife(time, nightGlowMult, waterStrength) {
+      const UP = [0, 1, 0];
+      const nightMix = clamp((nightGlowMult - 1.0) / 0.58, 0.0, 1.0);
+      const koiY = 14.42 * VS;
+      for (let i = 0; i < KOI_SCHOOL.length; i++) {
+        const k = KOI_SCHOOL[i];
+        const a = time * k.spd + k.ph;
+        const px = k.cx + Math.cos(a) * k.rx;
+        const pz = k.cz + Math.sin(a) * k.rz;
+        const tx = -Math.sin(a) * k.rx * k.spd;
+        const tz = Math.cos(a) * k.rz * k.spd;
+        const f = norm3([tx, 0, tz]);
+        const r = norm3(cross(UP, f));
+        const q = quatFromFrame(r, UP, f);
+        const py = koiY + Math.sin(time * 3.0 + k.ph) * 0.025;
+        const sc = k.sc;
+        pushBox(px, py, pz, q, 0.22 * sc, 0.14 * sc, 0.56 * sc, k.c1, 0.08, 5.0);
+        pushBox(px + f[0] * 0.06 * sc, py + 0.05 * sc, pz + f[2] * 0.06 * sc, q, 0.16 * sc, 0.08 * sc, 0.24 * sc, k.c2, 0.08, 5.0);
+        pushBox(px + f[0] * 0.05 * sc, py - 0.02 * sc, pz + f[2] * 0.05 * sc, q, 0.40 * sc, 0.04 * sc, 0.14 * sc, k.c2, 0.05, 5.0);
+        const wag = Math.sin(time * 9.5 + k.ph * 2.0) * 0.34;
+        const tF = norm3([f[0] + r[0] * wag, 0, f[2] + r[2] * wag]);
+        const tR = norm3(cross(UP, tF));
+        pushBox(px - f[0] * 0.36 * sc, py, pz - f[2] * 0.36 * sc, quatFromFrame(tR, UP, tF), 0.08 * sc, 0.16 * sc, 0.26 * sc, k.c1, 0.06, 5.0);
+      }
+
+      if (currentTimeMode !== 'night' && currentWeather === 'clear') {
+        for (let i = 0; i < BUTTERFLIES.length; i++) {
+          const bf = BUTTERFLIES[i];
+          const a = time * bf.spd + bf.ph;
+          const bx = bf.cx + Math.cos(a) * bf.rad;
+          const by = bf.cy + Math.sin(a * 2.0) * 0.55;
+          const bz = bf.cz + Math.sin(a) * Math.cos(a * 0.5) * bf.rad;
+          const dir = norm3([-Math.sin(a), Math.cos(a * 2.0) * 0.2, Math.cos(a)]);
+          const r = norm3(cross(UP, dir));
+          const flap = Math.sin(time * 18.0 + bf.ph * 3.0) * 0.65;
+          pushBox(bx + r[0] * 0.10, by, bz + r[2] * 0.10, quatFromBasis(dir, flap), 0.18, 0.03, 0.14, bf.col, 0.22, 5.0);
+          pushBox(bx - r[0] * 0.10, by, bz - r[2] * 0.10, quatFromBasis(dir, -flap), 0.18, 0.03, 0.14, bf.col, 0.22, 5.0);
+        }
+      }
+
+      const lotusVis = smoothstep(0.22, 0.85, waterStrength) * (currentTimeMode === 'day' ? 0.0 : (currentTimeMode === 'night' ? 1.0 : 0.65));
+      if (lotusVis > 0.03) {
+        for (let i = 0; i < 14; i++) {
+          const th = (i / 14) * Math.PI * 2 + time * 0.012 + 0.35;
+          const op = XUANWU_CFG.orbitFn(th);
+          const lx = op[0] + Math.sin(i * 2.7) * 2.4;
+          const lz = op[2] + Math.cos(i * 3.1) * 2.4;
+          const ly = op[1] + 0.12 + Math.sin(time * 2.1 + i * 1.4) * 0.10 - (1.0 - lotusVis) * 1.2;
+          const ls = 0.85 * lotusVis;
+          pushBox(lx, ly, lz, ID_Q, 0.58 * ls, 0.10 * ls, 0.58 * ls, [0.98, 0.52, 0.72], (0.55 + nightMix * 0.65) * lotusVis, 5.0);
+          pushBox(lx, ly + 0.16 * ls, lz, ID_Q, 0.26 * ls, 0.24 * ls, 0.26 * ls, [1.0, 0.86, 0.36], (1.65 + nightMix * 1.1) * lotusVis, 5.0);
+        }
+      }
+    }
+
     const SNOW_QUATS = Array.from({ length: 24 }, () => [0, 0, 0, 1]);
     const lightPosBuf = new Float32Array(42);
     const lightColBuf = new Float32Array(42);
@@ -5513,8 +5665,28 @@
           p.vy -= dt * 13.8;
         }
       }
+      for (let i = phoenixFeathers.length - 1; i >= 0; i--) {
+        const p = phoenixFeathers[i];
+        if (playing) {
+          p.age += dt; if (p.age >= p.life) { phoenixFeathers.splice(i, 1); continue; }
+          p.x += (p.vx + Math.sin(simTime * 3.4 + p.ph) * 1.45) * dt;
+          p.y += p.vy * dt;
+          p.z += (p.vz + Math.cos(simTime * 2.9 + p.ph) * 1.45) * dt;
+          p.vy = Math.max(-3.6, p.vy - dt * 1.8);
+          p.vx *= (1 - dt * 0.8); p.vz *= (1 - dt * 0.8);
+        }
+      }
 
-      // Camera + Earth-Shaking Tremor + Butter-Smooth Follow Mode (3 Dragons + Fire Phoenix!)
+      // Smooth Camera Preset Tween + Earth-Shaking Tremor + Butter-Smooth Follow Mode
+      if (camTween && currentCamMode !== 'dragon') {
+        camTween.t += dt;
+        const u = smootherstep(0.0, 1.0, camTween.t / camTween.dur);
+        cam.yaw = mix(camTween.sYaw, camTween.eYaw, u);
+        cam.pitch = mix(camTween.sPitch, camTween.ePitch, u);
+        cam.dist = mix(camTween.sDist, camTween.eDist, u);
+        cam.target = mix3(camTween.sTarget, camTween.eTarget, u);
+        if (camTween.t >= camTween.dur) camTween = null;
+      }
       const aspect = fboW / fboH;
       const followZoomScale = aspect < 1.0 ? clamp(0.86 / Math.max(aspect, 0.44), 1.0, 1.52) : 1.0;
       let target = [...cam.target];
@@ -5602,6 +5774,8 @@
         eye[0] += sx; eye[1] += sy; eye[2] += sz;
         target[0] += sx * 0.65; target[1] += sy * 0.65;
       }
+      lastCamEye = [...eye];
+      lastCamTarget = [...target];
 
       const baseFovY = 0.72;
       const fov = aspect < 1.35
@@ -5862,6 +6036,27 @@
         pushBox(p.x, p.y, p.z, pq, sc * 0.16, sc * 0.16, sc * 0.24, cinderCol, (1.45 - u * 0.85) * nightGlowMult, 5.0);
         pushWxBox(p.x, p.y, p.z, pq, sc * 1.72, sc * 1.72, sc * 1.72, cloudCol, 0.32 * (1 - u) * nightGlowMult, 3.0);
       }
+      if ((phoenixTime >= 0 || boostTime >= 0) && playing) {
+        phoenixFeatherAccum += dt * (phoenixTime >= 0 ? 18 : 12);
+        const fAnchors = [...phMarks.wingMids, ...phMarks.wingTips, ...phMarks.tailPoints];
+        while (phoenixFeatherAccum >= 1) {
+          phoenixFeatherAccum -= 1;
+          if (phoenixFeathers.length >= 64) break;
+          const orig = fAnchors[Math.floor(rand() * fAnchors.length)] || phPos;
+          phoenixFeathers.push({
+            x: orig[0] + (rand() - 0.5) * 2.2, y: orig[1] + (rand() - 0.5) * 1.2, z: orig[2] + (rand() - 0.5) * 2.2,
+            vx: -phFwd[0] * 1.4 + (rand() - 0.5) * 2.2, vy: -0.4 - rand() * 1.1, vz: -phFwd[2] * 1.4 + (rand() - 0.5) * 2.2,
+            age: 0, life: 2.4 + rand() * 1.4, ph: rand() * 6.28, gold: rand() > 0.42
+          });
+        }
+      }
+      for (const p of phoenixFeathers) {
+        const u = p.age / p.life;
+        const fade = smoothstep(0.0, 0.12, u) * (1.0 - smoothstep(0.68, 1.0, u));
+        if (fade < 0.03) continue;
+        const fq = quatFromBasis([Math.cos(simTime * 2.4 + p.ph), -0.45, Math.sin(simTime * 2.4 + p.ph)], Math.sin(simTime * 4.5 + p.ph) * 0.9);
+        pushBox(p.x, p.y, p.z, fq, 0.16 * fade, 0.05 * fade, 0.62 * fade, p.gold ? [1.0, 0.80, 0.18] : [1.0, 0.34, 0.08], (1.35 + (1.0 - u) * 0.85) * fade * nightGlowMult, 5.0);
+      }
       if (phNovaIntensity > 0.05) {
         pushWxBox(phPos[0], phPos[1] + 1.0, phPos[2], ID_Q, 5.4 * phNovaIntensity, 4.4 * phNovaIntensity, 6.2 * phNovaIntensity, [1.0, 0.34, 0.05], 0.14 * phNovaIntensity * nightGlowMult, 3.0);
       }
@@ -6103,6 +6298,7 @@
       const reactSalute = clamp(Math.max(xwEvt, convTime >= 0 ? 0.95 : 0.0, boostRamp), 0, 1);
       const reactFocus = xwEvt > 0.08 ? xwMarks.serpentHead : (convTime >= 0 ? CONVERGE_POINT : (boostRamp > 0.08 ? phPos : null));
       drawCastleLife(simTime, nightGlowMult, boatState, { salute: reactSalute, focusPos: reactFocus });
+      drawWildlife(simTime, nightGlowMult, waterCoverSmooth);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, instArray.subarray(0, instCount * INST_FLOATS));
@@ -6144,6 +6340,7 @@
       if (fireInt > 0.01) pushDynLight(gMouth[0] + gFwd[0] * 6, gMouth[1] + gFwd[1] * 6, gMouth[2] + gFwd[2] * 6, 3.0 * fireInt * f0, 1.35 * fireInt * f0, 0.28 * fireInt * f0, 780.0);
       if (isFiringBlack) pushDynLight(bHead[0] + bFwd[0] * 6, bHead[1] + bFwd[1] * 6, bHead[2] + bFwd[2] * 6, 2.6 * f1, 1.4 * f1, 3.4 * f1, 780.0);
       pushDynLight(xwMarks.shellC[0], xwMarks.shellC[1] + 2.4, xwMarks.shellC[2], 0.32 * nightGlowMult, 1.45 * nightGlowMult, 1.65 * nightGlowMult, 760.0);
+      pushDynLight(0, 19.5 * VS, 60 * VS, 1.12 * torchMult * f0, 0.58 * torchMult * f0, 0.16 * torchMult * f0, 260.0);
 
       gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
       if (cachedShadowMode !== currentTimeMode) {
@@ -6287,6 +6484,22 @@
       gl.uniform1i(uComp.uBloom, 1);
       gl.uniform2f(uComp.uTexel, 1.0 / fboW, 1.0 / fboH);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      if (pendingScreenshot) {
+        pendingScreenshot = false;
+        try {
+          const url = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `co-thanh-tu-linh-${Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast('Đã lưu ảnh PNG!');
+        } catch (err) {
+          showToast('Không thể lưu ảnh');
+        }
+      }
 
       if (activeGpuQ) {
         gl.endQuery(timerExt.TIME_ELAPSED_EXT);
